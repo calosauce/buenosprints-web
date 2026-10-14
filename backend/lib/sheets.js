@@ -1,13 +1,15 @@
 // Registro automático de cada pedido en Google Sheets (el "CRM" gratuito).
 //
 // A partir de esta versión, "Pedidos" ya NO es una sola pestaña continua:
-// cada pedido se escribe en la pestaña de SU MES, con nombre
-// "Pedidos YYYY-MM" (ej. "Pedidos 2026-10"), para que la hoja "Resumen"
-// pueda sacar totales por mes y del año con fórmulas simples y sin que la
-// pestaña de pedidos se vuelva interminable. Si la pestaña del mes no
-// existe todavía (ej. el primer pedido de un mes nuevo), se crea sola
-// duplicando la plantilla oculta "_Plantilla" (que ya trae el dropdown de
-// estado con colores y los encabezados/formato correctos).
+// cada pedido se escribe en la pestaña de SU MES, con nombre en español
+// (ej. "Octubre 2026" — así lo ve a diario quien toma las órdenes, sin
+// nombres técnicos), para que la hoja "Resumen" pueda sacar totales por mes
+// y del año con fórmulas simples y sin que la pestaña de pedidos se vuelva
+// interminable. Si la pestaña del mes no existe todavía (ej. el primer
+// pedido de un mes nuevo), se crea sola duplicando la plantilla oculta
+// "_Plantilla" (que ya trae el dropdown de estado con colores y los
+// encabezados/formato correctos) — esa pestaña está oculta a propósito y
+// no debe editarse ni mostrarse; es solo el molde interno para crear meses.
 //
 // También calcula y escribe, por pedido, las columnas financieras que
 // pidió el taller: Venta bruta, ITBIS 18%, Venta neta, Costo de producción
@@ -60,11 +62,16 @@ function clienteSheets() {
 
 const pesos = (centavos) => Math.round(((centavos || 0) / 100) * 100) / 100;
 
-// Nombre de la pestaña del mes para una fecha dada, ej. "Pedidos 2026-10".
+const MESES_ES = [
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+];
+
+// Nombre de la pestaña del mes para una fecha dada, ej. "Octubre 2026".
+// En español y sin prefijo técnico a propósito: esta pestaña la ve a
+// diario quien toma las órdenes en el taller, no un programador.
 function nombreHojaMes(fecha) {
-  const yyyy = fecha.getFullYear();
-  const mm = String(fecha.getMonth() + 1).padStart(2, "0");
-  return `Pedidos ${yyyy}-${mm}`;
+  return `${MESES_ES[fecha.getMonth()]} ${fecha.getFullYear()}`;
 }
 
 // Devuelve el sheetId de `nombre` si ya existe, o null si no.
