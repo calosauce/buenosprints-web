@@ -2,7 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 
-const { crearPedido, obtenerPedido, marcarPagado } = require("./lib/db");
+const { crearPedido, obtenerPedido, marcarPagado, mantenimiento } = require("./lib/db");
 const { generarPDFPedido } = require("./lib/pdf");
 const { enviarCotizacionAlTaller } = require("./lib/email");
 const { linkWhatsApp } = require("./lib/whatsapp");
@@ -73,5 +73,18 @@ app.post("/api/pedidos/:numero/pagar", async (req, res) => {
 });
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
+
+// Ruta TEMPORAL de un solo uso: limpia los pedidos de prueba y arranca la
+// numeración interna en el número que corresponda para no chocar con las
+// órdenes que ya se llevan a mano. Se quita en el próximo commit.
+app.post("/api/admin/mantenimiento-7cd5b2eb", async (req, res) => {
+  try {
+    const resultado = await mantenimiento(req.body || {});
+    res.json(resultado);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 app.listen(PORT, () => console.log(`Buenos Prints backend escuchando en :${PORT}`));
