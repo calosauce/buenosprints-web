@@ -5,10 +5,15 @@
 const nodemailer = require("nodemailer");
 
 function crearTransportador() {
+  const port = Number(process.env.SMTP_PORT || 465);
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,       // ej. smtp.hostinger.com
-    port: Number(process.env.SMTP_PORT || 465),
-    secure: true,
+    host: process.env.SMTP_HOST,       // ej. smtp.gmail.com, smtp.hostinger.com
+    port,
+    // Puerto 465 = TLS implícito (secure: true). Puerto 587 (y cualquier otro
+    // que no sea 465, como el STARTTLS de Gmail) = TLS negociado después de
+    // conectar (secure: false). Fijar esto en `true` siempre rompe el envío
+    // por 587 (ej. Gmail) con un error de autenticación/conexión confuso.
+    secure: port === 465,
     auth: {
       user: process.env.SMTP_USER,     // ej. pedidos@buenosprints.com
       pass: process.env.SMTP_PASS,
