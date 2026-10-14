@@ -133,22 +133,4 @@ async function marcarPagado(numero) {
   return obtenerPedido(numero);
 }
 
-// Uso único de mantenimiento (ver ruta temporal en server.js).
-async function mantenimiento({ borrarNumeros = [], fijarContadorAnio = null, fijarContadorValor = null } = {}) {
-  await asegurarTablas();
-  if (borrarNumeros.length) {
-    await pool.query("DELETE FROM pedidos WHERE numero IN (?)", [borrarNumeros]);
-  }
-  if (fijarContadorAnio && fijarContadorValor !== null) {
-    const clave = `pedido-${fijarContadorAnio}`;
-    await pool.query(
-      "INSERT INTO contadores (clave, valor) VALUES (?, ?) ON DUPLICATE KEY UPDATE valor = ?",
-      [clave, fijarContadorValor, fijarContadorValor]
-    );
-  }
-  const [pedidos] = await pool.query("SELECT numero, estado FROM pedidos ORDER BY id");
-  const [contadores] = await pool.query("SELECT clave, valor FROM contadores");
-  return { pedidos, contadores };
-}
-
-module.exports = { crearPedido, obtenerPedido, marcarPagado, mantenimiento };
+module.exports = { crearPedido, obtenerPedido, marcarPagado };
