@@ -40,6 +40,8 @@ async function asegurarTablas() {
           numero VARCHAR(32) UNIQUE NOT NULL,
           estado VARCHAR(20) NOT NULL DEFAULT 'pendiente_pago',
           cliente_nombre VARCHAR(255),
+          cliente_razon_social VARCHAR(255),
+          cliente_rnc VARCHAR(32),
           cliente_telefono VARCHAR(50),
           cliente_email VARCHAR(255),
           detalle_json LONGTEXT NOT NULL,
@@ -56,6 +58,20 @@ async function asegurarTablas() {
           valor INT NOT NULL
         ) ENGINE=InnoDB;
       `);
+      // Migración liviana: si la tabla "pedidos" ya existía de antes (de un
+      // despliegue previo a agregar razón social / RNC), se le agregan esas
+      // columnas sin romper nada. Si ya existen, MySQL devuelve el error
+      // 1060 (columna duplicada) y simplemente se ignora.
+      for (const sql of [
+        "ALTER TABLE pedidos ADD COLUMN cliente_razon_social VARCHAR(255) AFTER cliente_nombre",
+        "ALTER TABLE pedidos ADD COLUMN cliente_rnc VARCHAR(32) AFTER cliente_razon_social",
+      ]) {
+        try {
+          await pool.query(sql);
+        } catch (err) {
+          if (err.code !== "ER_DUP_FIELDNAME") throw err;
+        }
+      }
     })();
   }
   return listoPromesa;
@@ -81,9 +97,19 @@ async function crearPedido({ cliente, detalle, subtotal, total }) {
     await conn.beginTransaction();
     const numero = await siguienteNumero(conn);
     await conn.query(
-      `INSERT INTO pedidos (numero, cliente_nombre, cliente_telefono, cliente_email, detalle_json, subtotal, total)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [numero, cliente.nombre || null, cliente.telefono || null, cliente.email || null, JSON.stringify(detalle), subtotal, total]
+      `INSERT INTO pedidos (numero, cliente_nombre, cliente_razon_social, cliente_rnc, cliente_telefono, cliente_email, detalle_json, subtotal, total)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        numero,
+        cliente.nombre || null,
+        cliente.razonSocial || null,
+        cliente.rnc || null,
+        cliente.telefono || cliente.whatsapp || null,
+        cliente.email || null,
+        JSON.stringify(detalle),
+        subtotal,
+        total,
+      ]
     );
     await conn.commit();
     return obtenerPedido(numero);
