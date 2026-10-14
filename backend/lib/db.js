@@ -12,6 +12,13 @@
 
 const mysql = require("mysql2/promise");
 
+// Estados posibles de un pedido (en este orden de flujo normal), y cuáles de
+// ellos cuentan como "ya pagado" para efectos de (a) el PDF que se genera
+// (cotización vs. comprobante) y (b) la fecha `pagado_en`. "cancelado" nunca
+// cuenta como pagado aunque se llegue a él desde cualquier otro estado.
+const ESTADOS = ["cotizado", "pagado_produccion", "listo_entrega", "entregado", "cancelado"];
+const ESTADOS_PAGADOS = ["pagado_produccion", "listo_entrega", "entregado"];
+
 // Hostinger entrega DB_HOST="localhost", pero en Node.js eso puede resolver a
 // ::1 (IPv6) y el usuario de la base no siempre tiene permiso desde ahí.
 // Forzamos 127.0.0.1 salvo que se indique explícitamente otro host (ej. para
@@ -97,8 +104,8 @@ async function crearPedido({ cliente, detalle, subtotal, total }) {
     await conn.beginTransaction();
     const numero = await siguienteNumero(conn);
     await conn.query(
-      `INSERT INTO pedidos (numero, cliente_nombre, cliente_razon_social, cliente_rnc, cliente_telefono, cliente_email, detalle_json, subtotal, total)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO pedidos (numero, estado, cliente_nombre, cliente_razon_social, cliente_rnc, cliente_telefono, cliente_email, detalle_json, subtotal, total)
+       VALUES (?, 'cotizado', ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         numero,
         cliente.nombre || null,
@@ -127,10 +134,37 @@ async function obtenerPedido(numero) {
   return rows[0] || null;
 }
 
-async function marcarPagado(numero) {
+// Cambia el estado de un pedido (usado por el endpoint que llama el Apps
+// Script cuando alguien edita el dropdown "Estado" en Google Sheets, y por
+// el endpoint viejo /pagar que se deja por compatibilidad).
+// - Valida que el estado sea uno de los conocidos.
+// - `pagado_en` se fija la PRIMERA vez que el pedido entra a un estado
+//   "pagado" (pagado_produccion / listo_entrega / entregado) y nunca se
+//   borra después (ni siquiera si luego se cancela), para no perder ese
+//   dato histórico.
+async function actualizarEstado(numero, estado) {
   await asegurarTablas();
-  await pool.query("UPDATE pedidos SET estado = 'pagado', pagado_en = NOW() WHERE numero = ?", [numero]);
+  if (!ESTADOS.includes(estado)) {
+    throw Object.assign(new Error(`Estado inválido: ${estado}`), { codigo: "ESTADO_INVALIDO" });
+  }
+  const pedido = await obtenerPedido(numero);
+  if (!pedido) return null;
+
+  const yaPagado = Boolean(pedido.pagado_en);
+  const entraAPagado = ESTADOS_PAGADOS.includes(estado) && !yaPagado;
+
+  if (entraAPagado) {
+    await pool.query("UPDATE pedidos SET estado = ?, pagado_en = NOW() WHERE numero = ?", [estado, numero]);
+  } else {
+    await pool.query("UPDATE pedidos SET estado = ? WHERE numero = ?", [estado, numero]);
+  }
   return obtenerPedido(numero);
 }
 
-module.exports = { crearPedido, obtenerPedido, marcarPagado };
+// Se deja por compatibilidad con el endpoint viejo /api/pedidos/:numero/pagar
+// (marcado a mano desde el taller antes de que existiera el dropdown).
+async function marcarPagado(numero) {
+  return actualizarEstado(numero, "pagado_produccion");
+}
+
+module.exports = { crearPedido, obtenerPedido, marcarPagado, actualizarEstado, ESTADOS, ESTADOS_PAGADOS };

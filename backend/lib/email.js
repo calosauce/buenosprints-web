@@ -32,4 +32,44 @@ async function enviarCotizacionAlTaller(pedido, pdfBuffer) {
   });
 }
 
-module.exports = { enviarCotizacionAlTaller };
+// Mensajes amigables por estado para el correo que recibe el CLIENTE cuando
+// alguien en el taller cambia el dropdown "Estado" en Google Sheets.
+// "cotizado" no dispara correo (es el estado inicial, el cliente ya recibió
+// la cotización por correo/WhatsApp al hacer el pedido).
+const MENSAJES_ESTADO = {
+  pagado_produccion: {
+    asunto: (p) => `Pedido ${p.numero} — ¡Pago confirmado, en producción!`,
+    cuerpo: (p) => `Hola${p.cliente_nombre ? " " + p.cliente_nombre : ""},\n\nConfirmamos el pago de tu pedido ${p.numero} y ya está en producción en el taller.\n\nTe avisaremos por aquí en cuanto esté listo para entrega.\n\n¡Gracias por tu compra!`,
+  },
+  listo_entrega: {
+    asunto: (p) => `Pedido ${p.numero} — ¡Listo para entrega!`,
+    cuerpo: (p) => `Hola${p.cliente_nombre ? " " + p.cliente_nombre : ""},\n\n¡Tu pedido ${p.numero} ya está listo! Puedes coordinar la entrega o retiro con nosotros por WhatsApp (849-577-9893).\n\n¡Gracias por tu compra!`,
+  },
+  entregado: {
+    asunto: (p) => `Pedido ${p.numero} — Entregado`,
+    cuerpo: (p) => `Hola${p.cliente_nombre ? " " + p.cliente_nombre : ""},\n\nConfirmamos que tu pedido ${p.numero} fue entregado. ¡Esperamos que te encante!\n\nSi tienes cualquier duda o quieres hacer otro pedido, aquí estamos.\n\n¡Gracias por preferirnos!`,
+  },
+  cancelado: {
+    asunto: (p) => `Pedido ${p.numero} — Cancelado`,
+    cuerpo: (p) => `Hola${p.cliente_nombre ? " " + p.cliente_nombre : ""},\n\nTu pedido ${p.numero} fue cancelado. Si crees que esto es un error o quieres volver a hacer el pedido, escríbenos por WhatsApp (849-577-9893).\n\nGracias por tu comprensión.`,
+  },
+};
+
+// Envía al CLIENTE (no al taller) un correo con el nuevo estado de su pedido.
+// No hace nada si el estado no tiene mensaje definido (ej. "cotizado") o si
+// el pedido no tiene correo de contacto.
+async function enviarActualizacionAlCliente(pedido, estado) {
+  const plantilla = MENSAJES_ESTADO[estado];
+  if (!plantilla || !pedido.cliente_email) return { ok: false, motivo: "sin plantilla o sin correo" };
+
+  const transportador = crearTransportador();
+  await transportador.sendMail({
+    from: process.env.SMTP_USER,
+    to: pedido.cliente_email,
+    subject: plantilla.asunto(pedido),
+    text: plantilla.cuerpo(pedido),
+  });
+  return { ok: true };
+}
+
+module.exports = { enviarCotizacionAlTaller, enviarActualizacionAlCliente };

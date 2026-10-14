@@ -2,9 +2,9 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 
-const { crearPedido, obtenerPedido, marcarPagado } = require("./lib/db");
+const { crearPedido, obtenerPedido, marcarPagado, actualizarEstado, ESTADOS } = require("./lib/db");
 const { generarPDFPedido } = require("./lib/pdf");
-const { enviarCotizacionAlTaller } = require("./lib/email");
+const { enviarCotizacionAlTaller, enviarActualizacionAlCliente } = require("./lib/email");
 const { linkWhatsApp } = require("./lib/whatsapp");
 const { registrarPedidoEnSheet } = require("./lib/sheets");
 
@@ -58,7 +58,11 @@ app.post("/api/pedidos", async (req, res) => {
 app.get("/api/pedidos/:numero/pdf", async (req, res) => {
   const pedido = await obtenerPedido(req.params.numero);
   if (!pedido) return res.status(404).send("Pedido no encontrado");
-  const esFactura = pedido.estado === "pagado";
+  // Es "factura"/comprobante desde el momento en que el pedido quedó pagado
+  // por primera vez (columna pagado_en), sin importar en qué estado esté
+  // ahora (en producción, listo, entregado...) — así el dropdown de estados
+  // puede crecer o cambiar de nombres sin romper esta lógica.
+  const esFactura = Boolean(pedido.pagado_en);
   const pdfBuffer = await generarPDFPedido(pedido, { esFactura });
   res.set("Content-Type", "application/pdf");
   res.send(pdfBuffer);
@@ -70,6 +74,43 @@ app.post("/api/pedidos/:numero/pagar", async (req, res) => {
   const pedido = await marcarPagado(req.params.numero);
   if (!pedido) return res.status(404).json({ error: "Pedido no encontrado" });
   res.json({ ok: true, pedido });
+});
+
+// Llamado por el Apps Script del Google Sheet cuando alguien en el taller
+// cambia el dropdown "Estado" de un pedido. Protegido con un secreto
+// compartido (SHEETS_WEBHOOK_SECRET) para que no cualquiera en internet
+// pueda cambiar estados o disparar correos a clientes.
+app.post("/api/pedidos/:numero/estado", async (req, res) => {
+  const secreto = process.env.SHEETS_WEBHOOK_SECRET;
+  if (!secreto) {
+    return res.status(500).json({ error: "SHEETS_WEBHOOK_SECRET no configurado en el servidor." });
+  }
+  if (req.get("x-webhook-secret") !== secreto) {
+    return res.status(401).json({ error: "No autorizado." });
+  }
+
+  const { estado } = req.body || {};
+  if (!ESTADOS.includes(estado)) {
+    return res.status(400).json({ error: `Estado inválido. Debe ser uno de: ${ESTADOS.join(", ")}` });
+  }
+
+  try {
+    const pedido = await actualizarEstado(req.params.numero, estado);
+    if (!pedido) return res.status(404).json({ error: "Pedido no encontrado" });
+
+    let correoEnviado = false;
+    try {
+      const resultado = await enviarActualizacionAlCliente(pedido, estado);
+      correoEnviado = Boolean(resultado?.ok);
+    } catch (err) {
+      console.error("No se pudo enviar el correo de actualización de estado:", err.message);
+    }
+
+    res.json({ ok: true, pedido, correoEnviado });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error interno al actualizar el estado." });
+  }
 });
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
