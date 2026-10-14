@@ -1,0 +1,1659 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Buenos Prints</title>
+<meta name="description" content="Stickers y etiquetas personalizadas: troqueladas, laminadas y resistentes al agua, en gloss o matte. Arma tu pedido y sube tu diseño en Santo Domingo.">
+<meta property="og:title" content="Buenos Prints — Stickers y etiquetas personalizadas">
+<meta property="og:description" content="Troquelados, laminados y resistentes al agua. Arma tu pedido online.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: tienda de una sola página — menú por producto, hero con collage de stickers, catálogo, materiales, configurador y carrito. Estética de mesa de corte y stickers con borde blanco. */
+:root{
+  --bg:#FFF8EC; --paper:#FFFFFF; --ink:#17140F; --muted:#6B6358; --line:#E8DFD0;
+  --accent:#FF4D2E; --accent-ink:#FFFFFF; --sun:#FFC93C; --mint:#2BB673; --sky:#7CC6FE; --pink:#FF8FC7;
+  --mat:#2F6D55; --mat-line:rgba(255,255,255,.12); --ok-bg:#E3F6EC; --ok-fg:#16774A; --warn-bg:#FFF4D1; --bad-bg:#FFE1D9;
+  --display:"Bricolage Grotesque",system-ui,sans-serif; --body:"DM Sans",system-ui,sans-serif;
+  color-scheme:light;
+}
+/* Tema oscuro: solo se reasignan los neutros (fondo, superficie, "tinta" y texto secundario).
+   Los colores de acento (rojo, sol, menta, cielo, rosa, mat verde) se mantienen iguales en
+   ambos temas porque ya son saturados y funcionan bien sobre cualquiera de los dos fondos. */
+:root[data-theme="dark"]{
+  --bg:#17140F; --paper:#231F17; --ink:#F3ECDC; --muted:#B6AC98; --line:#39332580;
+  color-scheme:dark;
+}
+:root[data-theme="dark"] .opt .tag,
+:root[data-theme="dark"] .qrow .tag,
+:root[data-theme="dark"] .dlg .id,
+:root[data-theme="dark"] .quality span,
+:root[data-theme="dark"] .matnote,
+:root[data-theme="dark"] .notice:not(.envio),
+:root[data-theme="dark"] .demo,
+:root[data-theme="dark"] .btn.sun{ color:#17140F; }
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--body);-webkit-font-smoothing:antialiased;padding-bottom:80px}
+@media(min-width:900px){body{padding-bottom:0}}
+h1,h2,h3{font-family:var(--display);line-height:1.04;margin:0 0 .4em;letter-spacing:-.02em;text-wrap:balance}
+h2{font-size:clamp(30px,5vw,48px)}
+h3{font-size:20px}
+p{margin:0 0 1em}
+a{color:inherit}
+img{max-width:100%}
+.wrap{max-width:1160px;margin:0 auto;padding-inline:16px}
+.muted{color:var(--muted)}
+section{padding-block:64px}
+.eyebrow{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;display:block}
+:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+
+/* Header */
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:var(--accent);color:var(--accent-ink)}
+.top .wrap{display:flex;align-items:center;gap:20px;height:86px}
+.logo{text-decoration:none;display:flex;align-items:center;gap:9px;flex:none;overflow:visible}
+.logo img{height:100px;width:auto;display:block}
+.menu{display:none;gap:4px;align-items:center}
+.menu a{text-decoration:none;font-weight:700;padding:8px 12px;border-radius:999px;color:var(--accent-ink)}
+.menu a:hover{background:var(--paper);color:var(--ink)}
+.top .right{margin-left:auto;display:flex;gap:10px;align-items:center}
+.cartbtn{white-space:nowrap}
+.themebtn{border:2px solid var(--ink);background:var(--paper);color:var(--ink);border-radius:999px;width:40px;height:40px;display:grid;place-items:center;cursor:pointer;flex:none;font-size:17px;line-height:1;box-shadow:2px 2px 0 var(--ink);transition:transform .1s,box-shadow .1s}
+.themebtn:hover{transform:translate(-1px,-1px);box-shadow:3px 3px 0 var(--ink)}
+.themebtn:active{transform:translate(1px,1px);box-shadow:1px 1px 0 var(--ink)}
+@media(max-width:420px){.top .wrap{gap:10px;height:60px}.logo img{height:44px}.top .right{gap:6px}.cartbtn{padding:7px 10px}.themebtn{width:36px;height:36px;font-size:15px}}
+.cartbtn .count{background:var(--ink);color:var(--paper);border-radius:999px;min-width:22px;height:22px;display:inline-grid;place-items:center;font-size:12px;padding:0 6px}
+.burger{border:2px solid var(--ink);background:var(--paper);border-radius:12px;width:42px;height:42px;display:grid;place-items:center;cursor:pointer}
+.burger span,.burger span::before,.burger span::after{display:block;width:18px;height:2px;background:var(--ink);position:relative;content:""}
+.burger span::before{position:absolute;top:-6px}.burger span::after{position:absolute;top:6px}
+.drawer{border-top:1px solid var(--line);background:var(--bg);padding:8px 16px 16px}
+.drawer a{display:block;padding:12px 4px;font-weight:700;text-decoration:none;border-bottom:1px solid var(--line);font-size:18px}
+.drawer a small{display:block;font-weight:400;color:var(--muted);font-size:14px}
+@media(min-width:960px){.menu{display:flex}.burger,.drawer{display:none!important}.hide-lg{display:none}}
+@media(max-width:959px){.show-lg{display:none!important}}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font:700 15px var(--body);padding:12px 20px;border-radius:999px;border:2px solid var(--ink);background:var(--accent);color:var(--accent-ink);text-decoration:none;cursor:pointer;box-shadow:3px 3px 0 var(--ink);transition:transform .1s,box-shadow .1s}
+.btn:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--ink)}
+.btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+.btn.ghost{background:var(--paper);color:var(--ink)}
+.btn.ghost:hover,.btn.ghost:focus-visible,.btn.ghost:active{background:var(--accent);color:var(--accent-ink);border-color:var(--ink)}
+.cta{background:var(--paper);color:var(--ink);transition:background .15s,color .15s,transform .1s,box-shadow .1s}
+.cta:hover,.cta:focus-visible,.cta.sel{background:var(--accent);color:var(--accent-ink)}
+.hero .cta:hover,.hero .cta:focus-visible,.hero .cta.sel{background:var(--sun);color:var(--ink)}
+.btn.sun{background:var(--sun);color:var(--ink)}
+.btn.sm{padding:8px 14px;font-size:14px}
+.btn.lg{padding:15px 26px;font-size:17px}
+.btn.block{width:100%}
+.btn.wait{opacity:.6;cursor:progress}
+.linkbtn{background:none;border:0;padding:0;font:inherit;color:var(--muted);text-decoration:underline;cursor:pointer}
+
+/* Hero */
+.hero{padding-block:44px 56px;overflow:hidden;background:var(--accent);color:var(--accent-ink);border-bottom:2px solid var(--ink)}
+.hero .wrap{display:grid;gap:28px;align-items:center}
+@media(min-width:960px){.hero .wrap{grid-template-columns:1.05fr 1fr}}
+.hero h1{font-size:clamp(40px,7.4vw,80px);font-weight:800;color:var(--accent-ink)}
+.hero h1 em{font-style:normal;color:var(--sun)}
+.hero p.lead{font-size:19px;max-width:520px;color:var(--accent-ink);opacity:.92}
+.ctas{display:flex;gap:12px;flex-wrap:wrap;margin-top:22px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px;padding:0;list-style:none}
+.chips li{background:var(--paper);color:var(--ink);border:1.5px solid var(--ink);border-radius:999px;padding:5px 12px;font-size:14px;font-weight:500;display:flex;align-items:center;gap:6px}
+.chips li::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--mint)}
+.chips li.chip-fast{background:var(--sun);border-color:var(--ink);font-weight:700}
+.chips li.chip-fast::before{display:none}
+.collage{position:relative;height:360px;max-width:560px;width:100%;justify-self:center}
+@media(max-width:959px){.collage{order:-1;height:250px;max-width:420px}}
+@media(min-width:960px){.collage{height:470px}}
+.hs{position:absolute;filter:drop-shadow(4px 0 0 var(--paper)) drop-shadow(-4px 0 0 var(--paper)) drop-shadow(0 4px 0 var(--paper)) drop-shadow(0 -4px 0 var(--paper)) drop-shadow(0 10px 12px rgba(23,20,15,.28));animation:float 6s ease-in-out infinite}
+.hs svg,.hs img{width:100%;height:100%;display:block;object-fit:contain}
+.hs:nth-child(1){width:44%;left:2%;top:4%;--r:-9deg}
+.hs:nth-child(2){width:38%;right:3%;top:0;--r:8deg;animation-delay:-1.5s}
+.hs:nth-child(3){width:34%;left:33%;top:38%;--r:-3deg;animation-delay:-3s}
+.hs:nth-child(4){width:32%;left:0;bottom:2%;--r:6deg;animation-delay:-2s}
+.hs:nth-child(5){width:33%;right:0;bottom:4%;--r:-7deg;animation-delay:-4s}
+@keyframes float{0%,100%{transform:rotate(var(--r)) translateY(0)}50%{transform:rotate(var(--r)) translateY(-8px)}}
+/* Barra de marcas: logotipos de texto monocromáticos desplazándose de derecha a izquierda */
+.hero .wrap.trustwrap{display:block}
+.trustbar{margin-top:30px}
+.trustbar-label{margin:0 0 10px;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-ink);opacity:.9}
+.trustbar-scroll{overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent);mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent)}
+.trustbar-track{display:flex;align-items:center;gap:44px;width:max-content;animation:trustScroll 20s linear infinite}
+.trustlogo{display:flex;align-items:center}
+.trustlogo img{height:100%;width:auto;display:block;opacity:.75;filter:brightness(0) invert(1)}
+@keyframes trustScroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media(prefers-reduced-motion:reduce){.hs{animation:none;transform:rotate(var(--r))}html{scroll-behavior:auto}[data-art] .hs:first-child::after,.mat .sw.gloss::after,.mat .sw.gloss:hover::after,.opt:hover .swatch.gloss::after{animation:none;display:none}.mat .sw.gloss,.mat .sw.gloss:hover,.opt:hover .swatch.gloss{animation:none}.prod:hover [data-art] .hs{transition:none;transform:rotate(var(--r)) !important}}
+
+/* Products */
+.prods{display:grid;gap:16px;margin-top:28px}
+@media(min-width:760px){.prods{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}}
+.prod{background:var(--paper);border:2px solid var(--ink);border-radius:22px;overflow:hidden;display:flex;flex-direction:column;text-decoration:none;transition:transform .15s,box-shadow .15s}
+.prod:hover{transform:translate(-2px,-2px);box-shadow:5px 5px 0 var(--ink)}
+.prod .art{height:190px;display:grid;place-items:center;border-bottom:2px solid var(--ink);position:relative;overflow:hidden}
+.prod .art.a{background:var(--sun)}.prod .art.b{background:var(--sky)}.prod .art.c{background:var(--pink)}.prod .art.d{background:var(--mint)}
+/* Esquina "despegada" para que se note que son stickers troquelados, aunque el arte sea plano */
+.prod .art::after{content:"";position:absolute;right:0;bottom:0;width:0;height:0;border-style:solid;border-width:0 0 38px 38px;border-color:transparent transparent rgba(255,255,255,.6) transparent;filter:drop-shadow(-2px -2px 3px rgba(23,20,15,.3));pointer-events:none}
+/* Brillo diagonal tipo videojuego retro, solo en el PRIMER mini-sticker de cada tarjeta */
+[data-art]{position:relative}
+[data-art] .hs{transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
+[data-art] .hs:first-child{overflow:hidden;border-radius:10%}
+[data-art] .hs:first-child::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 32%,rgba(255,255,255,.85) 47%,rgba(255,255,255,.85) 53%,transparent 68%);transform:translateX(-140%);animation:shineSweep 3.4s ease-in-out infinite;pointer-events:none}
+@keyframes shineSweep{0%,28%{transform:translateX(-140%)}58%,100%{transform:translateX(140%)}}
+/* Al pasar el mouse por la tarjeta, los dos mini-stickers se separan y se levantan un poco */
+.prod:hover [data-art] .hs:nth-child(1){transform:rotate(var(--r)) translate(-6px,-9px) scale(1.08) !important}
+.prod:hover [data-art] .hs:nth-child(2){transform:rotate(var(--r)) translate(6px,-5px) scale(1.08) !important}
+.prod .body{padding:18px;display:flex;flex-direction:column;gap:4px;flex:1}
+.prod .body b{font-family:var(--display);font-size:24px;line-height:1.1}
+.prod .body span{color:var(--muted)}
+.prod .body .from{margin-top:auto;padding-top:12px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
+.prod .body .from i{font-style:normal;color:var(--accent)}
+
+/* Materials */
+/* Fondo tipo "mesa de corte" (igual al del configurador) para darle color a la sección;
+   las tarjetas de material flotan encima en --paper, como la vista previa flota sobre el stage. */
+.materials{background-color:var(--mat);background-image:linear-gradient(var(--mat-line) 1px,transparent 1px),linear-gradient(90deg,var(--mat-line) 1px,transparent 1px);background-size:22px 22px;border-block:2px solid var(--ink)}
+.materials .eyebrow{color:rgba(255,248,232,.72)}
+.materials h2,.materials>.wrap>p.muted{color:#FFF8EC}
+.materials .mat{background:var(--paper)}
+.mats{display:grid;gap:16px;margin-top:28px}
+@media(min-width:760px){.mats{grid-template-columns:1fr 1fr}}
+.mat{border:2px solid var(--ink);border-radius:22px;overflow:hidden;display:grid;grid-template-columns:1fr}
+@media(min-width:520px){.mat{grid-template-columns:150px 1fr}}
+.mat .sw{min-height:150px;position:relative}
+.mat .sw.gloss{background:linear-gradient(130deg,#FFFFFF 0%,#FF9A85 18%,var(--accent) 42%,#FFC9BE 56%,var(--accent) 72%,#C93A20 100%);background-size:230% 230%;overflow:hidden;cursor:pointer}
+.mat .sw.gloss:hover{animation:glossShift 4.5s ease-in-out infinite}
+.mat .sw.gloss:hover::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.4) 42%,rgba(255,255,255,.95) 50%,rgba(255,255,255,.4) 58%,transparent 70%);transform:translateX(-150%);animation:shineSweep 2.6s ease-in-out infinite;pointer-events:none}
+@keyframes glossShift{0%,100%{background-position:15% 30%}50%{background-position:85% 70%}}
+.mat .sw.matte{background:#E8674E;background-image:radial-gradient(rgba(255,255,255,.08) 1px,transparent 1px);background-size:4px 4px}
+.mat .sw span{position:absolute;left:12px;bottom:12px;background:var(--paper);border:1.5px solid var(--ink);border-radius:999px;font-size:12px;font-weight:700;padding:2px 10px}
+.mat .txt{padding:18px}
+.mat ul{margin:10px 0 0;padding:0;list-style:none;display:grid;gap:6px;font-size:15px}
+.mat li{display:grid;grid-template-columns:96px 1fr;gap:8px}
+.mat li b{color:var(--muted);font-weight:500}
+.matnote{margin-top:18px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;background:var(--warn-bg);border:2px solid var(--ink);border-radius:18px;padding:14px 18px}
+
+/* Builder */
+.bhead{display:flex;flex-wrap:wrap;gap:16px;align-items:end;justify-content:space-between}
+.ptabs{display:inline-flex;flex-wrap:wrap;border:2px solid var(--ink);border-radius:999px;background:var(--paper);padding:4px;gap:4px}
+.ptabs button{border:0;background:transparent;font:700 16px var(--body);padding:9px 18px;border-radius:999px;cursor:pointer;color:var(--ink)}
+.ptabs button.on{background:var(--ink);color:var(--paper)}
+.bgrid{display:grid;gap:28px;margin-top:24px}
+@media(min-width:900px){.bgrid{grid-template-columns:1.2fr .95fr}}
+@media(max-width:899px){.side{order:-1}.stage{height:220px}}
+.steps{min-width:0;background:var(--paper);border:2px solid var(--ink);border-radius:22px;padding:22px}
+.stepsprog{position:sticky;top:calc(env(safe-area-inset-top,0px) + 106px);z-index:5;background:var(--paper);padding-bottom:12px;margin-bottom:10px}
+.stepsprog-bars{display:flex;gap:5px}
+.stepsprog-bars span{flex:1;height:5px;border-radius:999px;background:var(--line);transition:background .2s}
+.stepsprog-bars span.on{background:var(--ink)}
+.stepsprog small{display:block;margin-top:7px;color:var(--muted);font-size:12px;font-weight:700;letter-spacing:.03em;text-transform:uppercase}
+.step{padding-block:22px;border-top:1px dashed var(--line)}
+.step:first-child{border-top:0;padding-top:0}
+.step:last-child{padding-bottom:0}
+.step-h{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.step-h .n{width:30px;height:30px;border-radius:50%;background:var(--ink);color:var(--paper);display:grid;place-items:center;font-weight:700;font-size:14px;flex:none}
+.step-h h3{margin:0}
+.step-h .right{margin-left:auto}
+.step.need .drop{border-color:var(--accent);background:var(--bad-bg);animation:shake .4s}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+.drop{display:block;border:2.5px dashed #C9BDA9;border-radius:18px;padding:26px 18px;text-align:center;cursor:pointer;background:var(--bg);transition:border-color .15s,background .15s}
+.drop:hover,.drop.over{border-color:var(--accent)}
+.drop .big{font-family:var(--display);font-weight:800;font-size:20px;display:block}
+.drop .file{display:flex;align-items:center;gap:12px;text-align:left}
+.drop .file .ext{width:48px;height:48px;border-radius:12px;background:var(--ink);color:var(--paper);display:grid;place-items:center;font-weight:700;font-size:12px;text-transform:uppercase;flex:none}
+.drop .file .meta{flex:1;min-width:0}
+.drop .file .meta b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hint{font-size:13px;color:var(--muted);margin:8px 0 0}
+details.alt{margin-top:10px;font-size:14px}
+details.alt summary{cursor:pointer;color:var(--muted)}
+details.alt input{margin-top:8px}
+
+.opts{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.opts.sizes{grid-template-columns:repeat(auto-fill,minmax(118px,1fr))}
+.opt{position:relative;border:2px solid var(--line);border-radius:14px;padding:12px;display:flex;gap:10px;align-items:center;cursor:pointer;background:var(--paper);transition:border-color .12s,box-shadow .12s;min-width:0}
+.opt:hover{border-color:#BFB19B}
+.opt.on{border-color:var(--ink);box-shadow:3px 3px 0 var(--ink)}
+.opt input{position:absolute;opacity:0;pointer-events:none}
+.opt:has(input:focus-visible){outline:3px solid var(--sun);outline-offset:2px}
+.opt b{display:block;line-height:1.2}
+.opt small{display:block;color:var(--muted);font-size:13px;line-height:1.3}
+.opt.col{flex-direction:column;align-items:flex-start;gap:2px}
+.opt .tag{position:absolute;top:-10px;right:8px;background:var(--sun);border:1.5px solid var(--ink);border-radius:999px;font-size:11px;font-weight:700;padding:1px 8px}
+.swatch{width:36px;height:36px;border-radius:10px;border:2px solid var(--ink);flex:none}
+.swatch.gloss{background:linear-gradient(135deg,#FFFFFF 0%,#FF9A85 30%,var(--accent) 55%,#FFD3C9 70%,var(--accent) 100%);background-size:230% 230%;position:relative;overflow:hidden}
+.opt:hover .swatch.gloss{animation:glossShift 4.5s ease-in-out infinite}
+.opt:hover .swatch.gloss::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.4) 42%,rgba(255,255,255,.95) 50%,rgba(255,255,255,.4) 58%,transparent 70%);transform:translateX(-150%);animation:shineSweep 1.8s ease-in-out infinite;pointer-events:none}
+.swatch.matte{background:#E8674E}
+.shape-ic{width:36px;height:36px;flex:none}
+
+.units{display:inline-flex;border:2px solid var(--ink);border-radius:999px;overflow:hidden}
+.units button{border:0;background:var(--paper);color:var(--ink);font:700 13px var(--body);padding:5px 12px;cursor:pointer}
+.units button.on{background:var(--ink);color:var(--paper)}
+.custom{display:none;margin-top:12px;gap:10px;align-items:end;flex-wrap:wrap}
+.custom.show{display:flex}
+.custom label{font-size:13px;font-weight:700;display:block}
+.custom input[type=number]{width:110px}
+.custom .x{padding-bottom:12px;font-weight:700}
+
+input[type=text],input[type=email],input[type=tel],input[type=url],input[type=number],input[type=date],select,textarea{width:100%;font:16px var(--body);padding:11px 12px;border:2px solid var(--line);border-radius:12px;background:var(--paper);color:var(--ink)}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--ink)}
+textarea{resize:vertical;min-height:80px}
+select{cursor:pointer}
+.cuponbox{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}
+.cuponbox input{flex:1;min-width:0}
+.cuponmsg{padding:0 16px 12px;margin:0}
+
+.qlist{display:grid;gap:8px}
+.qrow{position:relative;display:grid;grid-template-columns:74px 1fr auto;align-items:center;gap:10px;border:2px solid var(--line);border-radius:14px;padding:10px 14px;cursor:pointer;background:var(--paper);font-variant-numeric:tabular-nums}
+.qrow.on{border-color:var(--ink);box-shadow:3px 3px 0 var(--ink)}
+.qrow input[type=radio]{position:absolute;opacity:0;pointer-events:none}
+.qrow:has(input[type=radio]:focus-visible){outline:3px solid var(--sun);outline-offset:2px}
+.qrow .q{font-weight:700;font-size:17px}
+.qrow .qp{font-weight:700}
+.qrow .qp small{display:block;font-weight:400;color:var(--muted);font-size:13px}
+.qrow .save{background:var(--ok-bg);color:var(--ok-fg);font-weight:700;font-size:13px;border-radius:999px;padding:2px 9px}
+.qrow .tag{position:absolute;top:-10px;left:14px;background:var(--sun);border:1.5px solid var(--ink);border-radius:999px;font-size:11px;font-weight:700;padding:1px 8px}
+.qrow input[type=number]{padding:7px 10px;max-width:150px}
+
+/* Preview */
+.side{min-width:0}
+.side .card{position:sticky;top:calc(env(safe-area-inset-top,0px) + 106px);border:2px solid var(--ink);border-radius:22px;overflow:hidden;background:var(--paper);box-shadow:5px 5px 0 var(--ink)}
+.stage{position:relative;height:300px;background-color:var(--mat);background-image:linear-gradient(var(--mat-line) 1px,transparent 1px),linear-gradient(90deg,var(--mat-line) 1px,transparent 1px);background-size:22px 22px;display:grid;place-items:center}
+.pv{position:relative;display:grid;place-items:center;transition:width .25s,height .25s}
+.pv img{width:100%;height:100%;object-fit:contain;display:block}
+.pv .ph{width:100%;height:100%;display:grid;place-items:center;font:800 clamp(12px,2.2vw,18px)/1 var(--display);background:var(--sun);color:var(--ink);text-align:center;padding:8px}
+.pv .sheen{position:absolute;inset:0;pointer-events:none;display:none;background:linear-gradient(120deg,rgba(255,255,255,.6) 0%,rgba(255,255,255,0) 32%,rgba(255,255,255,0) 58%,rgba(255,255,255,.28) 72%,rgba(255,255,255,0) 86%)}
+.stage.gloss{--matf:saturate(1.12) contrast(1.04)}
+.stage.matte{--matf:saturate(.9) contrast(.96) brightness(1.02)}
+.stage.gloss .pv .sheen{display:block}
+.stage:not(.f-contorno) .pv{background:var(--paper);padding:7%;overflow:hidden;box-shadow:0 8px 16px rgba(0,0,0,.35)}
+.stage:not(.f-contorno) .pv img,.stage:not(.f-contorno) .pv .ph{filter:var(--matf)}
+.stage.f-circulo .pv,.stage.f-circulo .pv .ph{border-radius:50%}
+.stage.f-redondeado .pv{border-radius:16%}
+.stage.f-redondeado .pv .ph{border-radius:10%}
+.stage.f-cuadrado .pv,.stage.f-cuadrado .pv .ph{border-radius:2px}
+.stage.f-contorno .pv img,.stage.f-contorno .pv .ph{filter:var(--matf) drop-shadow(3px 0 0 #fff) drop-shadow(-3px 0 0 #fff) drop-shadow(0 3px 0 #fff) drop-shadow(0 -3px 0 #fff) drop-shadow(0 7px 8px rgba(0,0,0,.4))}
+.stage.f-contorno .pv .ph{border-radius:42% 58% 55% 45%/52% 44% 56% 48%}
+.stage.f-contorno .pv .sheen{-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center}
+.dimtag{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.55);color:#fff;font-weight:700;font-size:13px;border-radius:999px;padding:3px 12px;white-space:nowrap}
+.quality{position:absolute;top:12px;left:12px;right:12px;display:flex;justify-content:center}
+.quality span{background:var(--paper);border:2px solid var(--ink);border-radius:999px;font-size:12.5px;font-weight:700;padding:3px 10px}
+.quality.ok span{background:var(--ok-bg)}.quality.mid span{background:var(--warn-bg)}.quality.low span{background:var(--bad-bg)}
+.sum{padding:18px}
+.sum dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0 0 14px;font-size:14px}
+.sum dt{color:var(--muted)}
+.sum dd{margin:0;text-align:right;font-weight:500}
+.price{display:flex;align-items:end;justify-content:space-between;border-top:2px solid var(--ink);padding-top:12px;margin-bottom:14px;font-variant-numeric:tabular-nums}
+.price .t{font:800 32px/1 var(--display)}
+.price small{color:var(--muted);display:block;font-size:13px}
+.why{font-size:13px;color:var(--muted);text-align:center;margin:8px 0 0}
+.why.alert{color:var(--accent);font-weight:700}
+
+/* Checkout */
+#checkout{background:var(--accent);border-top:2px solid var(--ink)}
+#checkout .wrap{max-width:920px}
+#checkout .eyebrow{color:rgba(255,255,255,.85)}
+#checkout h2,#checkout h3{color:var(--accent-ink)}
+#checkout .field label{color:var(--accent-ink)}
+#checkout .field label .opt-l{color:rgba(255,255,255,.75)}
+#checkout .check{color:var(--accent-ink)}
+#checkout .why{color:rgba(255,255,255,.9)}
+.cart{border:2px solid var(--ink);border-radius:20px;background:var(--paper);overflow:hidden;margin:20px 0 28px}
+.line{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:14px;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line)}
+.thumb{width:64px;height:64px;border-radius:12px;background:var(--bg) center/contain no-repeat;border:1.5px solid var(--line);display:grid;place-items:center;font-weight:700;font-size:12px;text-transform:uppercase;color:var(--muted)}
+.line b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.line .specs{font-size:13.5px;color:var(--muted)}
+.line .lp{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+.cartfoot{padding:12px 16px;display:flex;gap:10px;flex-wrap:wrap}
+.totals{padding:14px 16px;background:var(--bg);font-size:15px;font-variant-numeric:tabular-nums;border-top:1px solid var(--line)}
+.totals div{display:flex;justify-content:space-between;padding:2px 0}
+.totals .grand{font:800 22px var(--display);border-top:2px solid var(--ink);margin-top:6px;padding-top:8px}
+.notice{background:var(--warn-bg);border:2px solid var(--ink);border-radius:14px;padding:10px 14px;font-size:14px;margin:0 0 16px}
+.notice.envio{margin:14px 16px 16px;font-weight:700;background:var(--bad-bg);border-color:var(--accent);color:var(--accent)}
+.notice.ok{background:var(--ok-bg);border-color:var(--ink);color:var(--ok-fg)}
+.fgrid{display:grid;gap:14px}
+@media(min-width:700px){.fgrid{grid-template-columns:1fr 1fr}.fgrid .full{grid-column:1/-1}}
+.field label{display:block;font-weight:700;font-size:14px;margin-bottom:5px}
+.field label .opt-l{font-weight:400;color:var(--muted)}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:14px}
+.check input{width:20px;height:20px;margin-top:2px;flex:none;accent-color:var(--ink)}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+
+/* Gallery */
+.gal{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:24px}
+@media(min-width:760px){.gal{grid-template-columns:repeat(4,1fr)}}
+.gal img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:18px;border:2px solid var(--ink);display:block}
+
+/* How + FAQ */
+.how{display:grid;gap:14px;margin-top:24px;counter-reset:h}
+@media(min-width:800px){.how{grid-template-columns:repeat(4,1fr)}}
+.how div{background:var(--paper);border:2px solid var(--ink);border-radius:18px;padding:18px;counter-increment:h}
+.how div::before{content:counter(h);display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-weight:800;margin-bottom:10px;border:2px solid var(--ink)}
+.how b{font-family:var(--display);font-size:18px;display:block;margin-bottom:4px}
+.how span{font-size:14.5px;color:var(--muted)}
+.faq details{background:var(--paper);border:2px solid var(--ink);border-radius:16px;padding:14px 18px;margin-bottom:10px;transition:border-color .15s}
+.faq summary{font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:12px;transition:color .15s}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font-size:22px;line-height:1}
+.faq details[open] summary::after{content:"–"}
+.faq details p{margin:10px 0 0}
+.faq details:hover,.faq details[open]{border-color:var(--accent)}
+.faq details:hover summary,.faq details[open] summary{color:var(--accent)}
+
+footer{background:#17140F;color:#FFF8EC;padding-block:40px}
+footer .wrap{display:flex;flex-wrap:wrap;gap:20px;justify-content:space-between;align-items:center}
+footer a{color:#FFF8EC}
+
+.mbar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--paper);border-top:2px solid var(--ink);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;justify-content:space-between;gap:12px;font-variant-numeric:tabular-nums}
+.mbar .t{font:800 20px/1 var(--display)}
+.mbar small{display:block;color:var(--muted);font-size:12px}
+@media(min-width:900px){.mbar{display:none}}
+.wa{position:fixed;right:16px;bottom:calc(88px + env(safe-area-inset-bottom,0px));z-index:35;width:54px;height:54px;border-radius:50%;background:#25D366;border:2px solid var(--ink);box-shadow:3px 3px 0 var(--ink);display:grid;place-items:center}
+@media(min-width:900px){.wa{bottom:20px}}
+.toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);opacity:0;background:var(--ink);color:var(--paper);padding:12px 18px;border-radius:14px;z-index:60;width:max-content;max-width:min(92vw,480px);font-size:14.5px;transition:all .25s;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+dialog{border:2px solid var(--ink);border-radius:22px;padding:0;max-width:min(92vw,520px);box-shadow:6px 6px 0 var(--ink);background:var(--paper);color:var(--ink)}
+dialog::backdrop{background:rgba(23,20,15,.55)}
+.dlg{padding:26px}
+.dlg .id{display:inline-block;background:var(--sun);border:2px solid var(--ink);border-radius:999px;padding:4px 14px;font-weight:800;font-size:18px;margin:6px 0 14px}
+.dlg ol{padding-left:20px;margin:0 0 18px}
+.dlg ol li{margin-bottom:4px}
+.dlg .acts{display:flex;gap:10px;flex-wrap:wrap}
+.demo{font-size:13px;background:var(--bad-bg);border-radius:10px;padding:8px 12px;margin-bottom:14px}
+
+/* Resumen de pedido imprimible: solo se ve al imprimir, oculta el resto del sitio. */
+.print-only{display:none}
+@media print{
+  body *{visibility:hidden}
+  #checkout,#checkout *{visibility:visible}
+  #checkout{position:absolute;top:0;left:0;width:100%;background:#fff;border-top:none;padding:0;margin:0}
+  #checkout .wrap{max-width:100%}
+  #checkout .eyebrow{display:none}
+  .cart{box-shadow:none;border-color:#000}
+  .cartfoot,#cuponBox,#cuponMsg,.linkbtn,#form,.notice.envio{display:none!important}
+  .print-only{display:block;visibility:visible;font-weight:800;font-family:var(--display);font-size:20px;margin-bottom:10px}
+}
+</style>
+<header class="top">
+  <div class="wrap">
+    <a href="#inicio" class="logo"><img src="logo-wide.svg" alt="Buenos Prints"></a>
+    <nav class="menu" aria-label="Principal">
+      <a href="#stickers" data-producto="stickers">Stickers</a>
+      <a href="#etiquetas" data-producto="etiquetas">Etiquetas</a>
+      <a href="#materiales">Materiales</a>
+      <a href="#como">Cómo funciona</a>
+      <a href="#faq">Preguntas</a>
+    </nav>
+    <div class="right">
+      <button class="themebtn" type="button" id="themeToggle" aria-label="Cambiar a tema oscuro" title="Cambiar tema">🌙</button>
+      <a class="btn sm ghost cartbtn" href="#checkout">Mi pedido <span class="count" id="cartCount">0</span></a>
+      <a class="btn sm ghost show-lg" href="#stickers" data-producto="stickers">Crear stickers</a>
+      <button class="burger" type="button" id="burger" aria-expanded="false" aria-controls="drawer" aria-label="Abrir menú"><span></span></button>
+    </div>
+  </div>
+  <nav class="drawer" id="drawer" hidden aria-label="Menú móvil">
+    <a href="#stickers" data-producto="stickers">Stickers <small>Troquelados, cualquier forma</small></a>
+    <a href="#etiquetas" data-producto="etiquetas">Etiquetas <small>Para tus productos y empaques</small></a>
+    <a href="#materiales">Materiales <small>Gloss o matte, laminados</small></a>
+    <a href="#como">Cómo funciona</a>
+    <a href="#faq">Preguntas frecuentes</a>
+  </nav>
+</header>
+
+<section class="hero" id="inicio">
+  <div class="wrap">
+    <div>
+      <h1>Stickers y etiquetas <em>personalizadas</em></h1>
+      <p class="lead">Troquelados a la forma de tu diseño, laminados en gloss o matte y resistentes al agua. Sube tu arte, elige tamaño y cantidad, y recibe tu prueba digital gratis.</p>
+      <div class="ctas">
+        <a class="btn lg cta sel" href="#stickers" data-producto="stickers">Crear stickers</a>
+        <a class="btn lg cta" href="#hojas" data-producto="hojas">Crear hoja de stickers</a>
+        <a class="btn lg cta" href="#etiquetas" data-producto="etiquetas">Crear etiquetas</a>
+      </div>
+      <ul class="chips">
+        <li class="chip-fast">⚡ Prueba digital gratis en 24h o menos</li>
+        <li id="chipMinimos"></li>
+        <li>Envío gratis desde RD$5,000</li>
+      </ul>
+    </div>
+    <div class="collage" id="collage" aria-label="Ejemplos de stickers"></div>
+  </div>
+  <div class="wrap trustwrap">
+    <div class="trustbar" aria-label="Marcas que han confiado en Buenos Prints">
+      <p class="trustbar-label">Marcas que confían en nosotros</p>
+      <div class="trustbar-scroll">
+        <div class="trustbar-track" id="trustTrack"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="productos" style="padding-top:8px">
+  <div class="wrap">
+    <span class="eyebrow">Productos</span>
+    <h2>¿Qué quieres imprimir?</h2>
+    <div class="prods">
+      <a class="prod" href="#stickers" data-producto="stickers">
+        <div class="art a" data-art="stickers"></div>
+        <div class="body"><b>Stickers troquelados</b><span>Cortados a la silueta de tu diseño. Para laptops, termos, merch y regalos.</span><span class="from">Desde <i id="fromStk"></i></span></div>
+      </a>
+      <a class="prod" href="#etiquetas" data-producto="etiquetas">
+        <div class="art b" data-art="etiquetas"></div>
+        <div class="body"><b>Etiquetas</b><span>Círculos y rectángulos para frascos, bolsas, cajas y empaques de tu marca.</span><span class="from">Desde <i id="fromEtq"></i></span></div>
+      </a>
+      <a class="prod" href="#hojas" data-producto="hojas">
+        <div class="art d" data-art="hojas"></div>
+        <div class="body"><b>Hojas de stickers</b><span>Varios diseños en una sola lámina. Ideal para planners, regalos y emprendedores.</span><span class="from">Desde <i id="fromHojas"></i></span></div>
+      </a>
+      <a class="prod" href="#muestras" id="muestrasCard">
+        <div class="art c" data-art="muestras"></div>
+        <div class="body"><b>Paquete de muestras</b><span>Toca el gloss y el matte antes de hacer tu pedido grande.</span><span class="from"><span id="muestrasPrecio"></span><i>Agregar →</i></span><span class="muted" style="font-weight:300;font-size:13px;margin-top:-2px">Envío gratis</span></div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section id="materiales" class="materials">
+  <div class="wrap">
+    <span class="eyebrow">Materiales</span>
+    <h2>Vinil laminado, en dos acabados</h2>
+    <p class="muted" style="max-width:620px">Todos nuestros stickers y etiquetas se imprimen en vinil y llevan laminado. Así resisten agua, rayones y el uso diario.</p>
+    <div class="mats">
+      <div class="mat">
+        <div class="sw gloss"><span>Gloss</span></div>
+        <div class="txt">
+          <h3>Vinil Gloss</h3>
+          <p class="muted" style="margin:0">Acabado brillante que hace resaltar los colores.</p>
+          <ul>
+            <li><b>Se siente</b><span>Liso y con brillo</span></li>
+            <li><b>Ideal para</b><span>Laptops, termos, logos coloridos, merch</span></li>
+            <li><b>Resiste</b><span>Agua, rayones y uso diario</span></li>
+          </ul>
+        </div>
+      </div>
+      <div class="mat">
+        <div class="sw matte"><span>Matte</span></div>
+        <div class="txt">
+          <h3>Vinil Matte</h3>
+          <p class="muted" style="margin:0">Acabado mate y elegante, sin reflejos.</p>
+          <ul>
+            <li><b>Se siente</b><span>Suave, tipo papel premium</span></li>
+            <li><b>Ideal para</b><span>Marcas premium, empaques, etiquetas</span></li>
+            <li><b>Resiste</b><span>Agua, rayones y uso diario</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="matnote">
+      <span><b>¿No sabes cuál elegir?</b> Pide el paquete de muestras y compáralos en tus manos.</span>
+      <button class="btn sm sun" type="button" id="muestrasBtn">Agregar muestras</button>
+    </div>
+  </div>
+</section>
+
+<section id="pedido">
+  <div class="wrap">
+    <span id="stickers"></span><span id="etiquetas"></span><span id="hojas"></span>
+    <div class="bhead">
+      <div>
+        <span class="eyebrow">Arma tu pedido</span>
+        <h2 id="bTitle" style="margin:0">Stickers troquelados</h2>
+      </div>
+      <div class="ptabs" role="tablist" aria-label="Producto">
+        <button type="button" role="tab" data-tab="stickers" class="on">Stickers</button>
+        <button type="button" role="tab" data-tab="etiquetas">Etiquetas</button>
+        <button type="button" role="tab" data-tab="hojas">Hojas</button>
+      </div>
+    </div>
+
+    <div class="bgrid">
+      <div class="steps">
+        <div class="stepsprog" aria-hidden="true">
+          <div class="stepsprog-bars">
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <small id="stepsProgLabel">Paso 1 de 6</small>
+        </div>
+        <div class="step" id="stepFile">
+          <div class="step-h"><span class="n">1</span><h3>Sube tu diseño</h3></div>
+          <label class="drop" id="drop">
+            <input type="file" id="file" hidden accept=".png,.jpg,.jpeg,.webp,.svg,.pdf,.ai,.eps,.psd">
+            <div id="dropEmpty">
+              <span class="big">Toca aquí para subir tu diseño</span>
+              <span class="muted">o arrástralo a este recuadro</span>
+            </div>
+            <div id="dropFile" class="file" hidden>
+              <div class="ext" id="fExt"></div>
+              <div class="meta"><b id="fName"></b><span class="muted" id="fSize"></span></div>
+              <button type="button" class="btn sm ghost" id="fRemove">Quitar</button>
+            </div>
+          </label>
+          <p class="hint">Ideal: PNG con fondo transparente a 300 dpi, o PDF / AI / SVG. Máximo <span class="maxmb"></span> MB por archivo.</p>
+          <details class="alt" id="altBox">
+            <summary>¿Tu archivo pesa mucho? Pega un enlace de Google Drive o WeTransfer</summary>
+            <input type="url" id="enlace" placeholder="https://drive.google.com/…">
+          </details>
+        </div>
+
+        <div class="step">
+          <div class="step-h"><span class="n">2</span><h3>Material</h3></div>
+          <div class="opts" id="materialesOpts"></div>
+        </div>
+
+        <div class="step">
+          <div class="step-h"><span class="n">3</span><h3>Forma del corte</h3></div>
+          <div class="opts" id="formas"></div>
+        </div>
+
+        <div class="step">
+          <div class="step-h"><span class="n">4</span><h3>Tamaño</h3>
+            <div class="units right" role="group" aria-label="Unidad de medida">
+              <button type="button" data-unit="in" class="on">Pulgadas</button>
+              <button type="button" data-unit="cm">cm</button>
+            </div>
+          </div>
+          <div class="opts sizes" id="tamanos"></div>
+          <div class="custom" id="customBox">
+            <div><label for="cw">Ancho (<span class="ulabel">pulg</span>)</label><input type="number" id="cw" step="0.1" inputmode="decimal"></div>
+            <span class="x">×</span>
+            <div><label for="ch">Alto (<span class="ulabel">pulg</span>)</label><input type="number" id="ch" step="0.1" inputmode="decimal"></div>
+            <p class="hint" style="flex-basis:100%" id="customHint"></p>
+          </div>
+          <p class="hint">El tamaño es el área máxima que ocupará tu diseño; el corte sigue su forma dentro de esa medida.</p>
+        </div>
+
+        <div class="step">
+          <div class="step-h"><span class="n">5</span><h3>Cantidad</h3></div>
+          <div class="qlist" id="cantidades"></div>
+        </div>
+
+        <div class="step">
+          <div class="step-h"><span class="n">6</span><h3>Instrucciones <span class="muted" style="font-weight:400;font-size:15px">(opcional)</span></h3></div>
+          <textarea id="notas" placeholder="Ej. quiero el borde blanco más fino, o quitar el fondo del logo"></textarea>
+        </div>
+      </div>
+
+      <aside class="side">
+        <div class="card">
+          <div class="stage gloss f-contorno" id="stage">
+            <div class="quality" id="quality" hidden><span></span></div>
+            <div class="pv" id="pv">
+              <div class="ph" id="ph">TU DISEÑO</div>
+              <img id="pvImg" alt="Vista previa de tu diseño" hidden>
+              <div class="sheen" id="sheen"></div>
+            </div>
+            <div class="dimtag" id="dimtag"></div>
+          </div>
+          <div class="sum">
+            <dl id="specs"></dl>
+            <div class="price">
+              <div><small>Precio por unidad</small><span id="unitP"></span></div>
+              <div style="text-align:right"><small>Total de este diseño</small><span class="t" id="totalP"></span></div>
+            </div>
+            <p class="hint" style="text-align:right;margin-top:-10px">ITBIS incluido</p>
+            <button class="btn block lg" id="addBtn" type="button">Agregar al pedido</button>
+            <p class="why" id="addHint"></p>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<section id="checkout">
+  <div class="wrap">
+    <p class="print-only">Buenos Prints — Resumen de pedido (<span id="printFecha"></span>)</p>
+    <span class="eyebrow">Paso final</span>
+    <h2>Tu pedido</h2>
+    <div class="cart">
+      <div id="lines"></div>
+      <div class="cuponbox" id="cuponBox" hidden>
+        <input type="text" id="cuponInput" placeholder="Código de descuento" autocomplete="off">
+        <button type="button" class="btn sm ghost" id="cuponBtn">Aplicar</button>
+      </div>
+      <p class="hint cuponmsg" id="cuponMsg" hidden></p>
+      <div class="totals" id="totals" hidden></div>
+      <p class="notice envio" id="envioNotice" hidden></p>
+    </div>
+
+    <form id="form" hidden novalidate>
+      <div class="notice" id="minNotice" hidden></div>
+      <h3 style="margin-bottom:14px">Tus datos</h3>
+      <div class="fgrid">
+        <div class="field"><label for="nombre">Nombre completo</label><input type="text" id="nombre" name="nombre" required autocomplete="name"></div>
+        <div class="field"><label for="razonSocial">Razón Social <span class="opt-l">(opcional)</span></label><input type="text" id="razonSocial" name="razonSocial" autocomplete="organization"></div>
+        <div class="field"><label for="whatsapp">WhatsApp</label><input type="tel" id="whatsapp" name="whatsapp" required autocomplete="tel" placeholder="809 000 0000"></div>
+        <div class="field"><label for="email">Correo</label><input type="email" id="email" name="email" required autocomplete="email"></div>
+        <div class="field full">
+          <label for="rnc">RNC para factura (e-CF) <span class="opt-l">(opcional)</span></label>
+          <input type="text" id="rnc" name="rnc" inputmode="numeric" placeholder="000-00000-0" autocomplete="off">
+          <p class="hint" id="rncMsg" hidden></p>
+        </div>
+        <div class="field full"><label for="entregas">Método de envío</label><select id="entregas" name="entrega"></select></div>
+        <div class="field full" id="dirBox" hidden><label for="direccion">Dirección de entrega</label><input type="text" id="direccion" name="direccion" placeholder="Calle, número, sector, ciudad"></div>
+        <div class="field"><label for="fecha">¿Para cuándo lo necesitas? <span class="opt-l">(opcional)</span></label><input type="date" id="fecha" name="fecha"></div>
+        <div class="field full"><label for="notasPedido">Comentarios del pedido <span class="opt-l">(opcional)</span></label><textarea id="notasPedido" name="notasPedido" placeholder="Ej. quiero el borde blanco más fino, o quitar el fondo del logo"></textarea></div>
+        <div class="hp" aria-hidden="true"><label>No llenar<input type="text" name="website" id="website" tabindex="-1" autocomplete="off"></label></div>
+        <label class="check full"><input type="checkbox" name="derechos" id="derechos" required> Confirmo que tengo los derechos para imprimir estos diseños.</label>
+        <div class="full">
+          <button class="btn block lg" id="sendBtn" type="submit">Enviar pedido</button>
+          <p class="why" style="font-weight:700;color:var(--accent-ink)">Al confirmar, te enviamos los datos para pagar. Prueba digital en 24h o menos luego del pago · Entrega en <span class="dias"></span> días laborables luego de aprobarla.</p>
+        </div>
+      </div>
+    </form>
+  </div>
+</section>
+
+<section id="trabajos" hidden>
+  <div class="wrap">
+    <span class="eyebrow">Portafolio</span>
+    <h2>Stickers que ya están por ahí</h2>
+    <div class="gal" id="gal"></div>
+    <p style="margin-top:18px"><a class="btn ghost" id="igBtn" href="#" target="_blank" rel="noopener">Ver más en Instagram</a></p>
+  </div>
+</section>
+
+<section id="como" style="border-top:2px solid var(--ink)">
+  <div class="wrap">
+    <span class="eyebrow">Proceso</span>
+    <h2>Cómo funciona</h2>
+    <div class="how">
+      <div><b>Arma tu pedido</b><span>Elige producto, material, forma, tamaño y cantidad, y sube tu diseño.</span></div>
+      <div><b>Confirma el pago</b><span>Te enviamos los datos y pagas por transferencia o enlace de pago, antes de producir.</span></div>
+      <div><b>Recibe tu prueba</b><span>En 24 horas o menos luego del pago, te enviamos la prueba digital por WhatsApp.</span></div>
+      <div><b>Producimos y entregamos</b><span>Apruebas la prueba y tus stickers llegan en <span class="dias"></span> días laborables (o 24h con RUSH).</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="faq" class="faq">
+  <div class="wrap" style="max-width:820px">
+    <span class="eyebrow">Ayuda</span>
+    <h2>Preguntas frecuentes</h2>
+    <details><summary>¿Cuál es la diferencia entre stickers y etiquetas?</summary><p>Los stickers son para pegar donde quieras (laptops, termos, carros) y casi siempre se cortan a la silueta del diseño. Las etiquetas son para tus productos: formas regulares como círculos y rectángulos, en cantidades más grandes y a menor precio por unidad.</p></details>
+    <details><summary>¿Qué archivos aceptan?</summary><p>PNG con fondo transparente (lo ideal), PDF, AI, EPS, SVG, PSD o JPG. Para que se vea nítido, tu imagen debe tener al menos 300 dpi al tamaño final. El configurador te avisa si tu imagen tiene baja resolución.</p></details>
+    <details><summary>¿Qué significa troquelado?</summary><p>Que cortamos el sticker siguiendo la silueta de tu diseño, con un pequeño borde blanco alrededor. También puedes elegir círculo, cuadrado o esquinas redondeadas.</p></details>
+    <details><summary>¿Son resistentes al agua?</summary><p>Sí. Imprimimos en vinil y los laminamos, así resisten agua, rayones y el uso diario.</p></details>
+    <details><summary>¿Cuánto tiempo tarda todo el proceso?</summary><p>La prueba digital llega en 24 horas o menos luego de confirmado el pago. Una vez que la apruebas, la entrega toma entre <span class="dias"></span> días laborables.</p></details>
+    <details><summary>¿Cómo pago?</summary><p>Al enviar tu pedido te compartimos los datos para pagar por transferencia o enlace de pago. Con el pago confirmado, te enviamos la prueba digital antes de producir.</p></details>
+    <details><summary>¿El envío es gratis?</summary><p>Retirar en oficina vía Vimenpaq siempre es gratis. Si prefieres envío a domicilio (Distrito Nacional o Santo Domingo), es gratis automáticamente cuando tu pedido supera <span id="faqEnvioGratis"></span> — lo verás reflejado solo en el paso final, sin necesidad de ningún código.</p></details>
+    <details><summary>¿Tienen servicio urgente (RUSH)?</summary><p>Sí. Con RUSH, tu pedido se entrega en 24 horas luego de que apruebes la prueba digital. En el paso final del pedido hay un botón "⚡ Agregar servicio RUSH" que calcula el costo automáticamente según el monto de tu pedido: RD$500 si es menor a RD$2,500; RD$750 entre RD$2,500 y RD$5,000; RD$1,500 entre RD$5,000 y RD$10,000; y RD$2,000 para pedidos de RD$10,001 o más.</p></details>
+    <details><summary>No tengo el diseño listo, ¿me ayudan?</summary><p>Sí. Escríbenos por WhatsApp y te cotizamos el diseño o la preparación de tu archivo para impresión.</p></details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div><b style="font-family:var(--display);font-size:22px">Buenos Prints</b><br><span style="opacity:.7">Stickers y etiquetas personalizadas · Santo Domingo, RD</span><br>
+      <span style="display:inline-flex;align-items:center;gap:8px;margin-top:10px;opacity:.9;font-weight:700;letter-spacing:.03em;font-size:13px">
+        <svg width="22" height="15" viewBox="0 0 20 14" aria-hidden="true" style="flex:none">
+          <rect x="0" y="0" width="20" height="14" rx="1.5" fill="currentColor"/>
+          <rect x="8.5" y="0" width="3" height="14" fill="#17140F"/>
+          <rect x="0" y="5.5" width="20" height="3" fill="#17140F"/>
+        </svg>
+        HECHO CON AMOR DESDE EL CARIBE
+      </span>
+    </div>
+    <div><a id="footWa" href="#" target="_blank" rel="noopener">WhatsApp</a> · <a id="footIg" href="#" target="_blank" rel="noopener">Instagram</a></div>
+  </div>
+</footer>
+
+<div class="mbar">
+  <div><small id="mbSpecs"></small><span class="t" id="mbTotal"></span></div>
+  <button class="btn sm" id="mbAdd" type="button">Agregar al pedido</button>
+</div>
+
+<a class="wa" id="waFloat" href="#" target="_blank" rel="noopener" aria-label="Escríbenos por WhatsApp al +1 849 577 9893" title="WhatsApp: +1 849 577 9893">
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .1-3.3-.8-2.8-1.1-4.5-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.8 0-1.4.7-2 1-2.3.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.1.1.3 0 .5l-.4.6-.4.4c-.1.2-.3.3-.1.6.2.3.7 1.2 1.6 2 1.1 1 2 1.3 2.3 1.4.3.1.5.1.6-.1l.9-1c.2-.3.4-.2.7-.1l1.9.9c.3.1.5.2.5.3.1.1.1.6-.1 1.2Z"/></svg>
+</a>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<dialog id="ok">
+  <div class="dlg">
+    <h2 style="font-size:32px">¡Pedido recibido!</h2>
+    <div id="demoNote"></div>
+    <div>Tu número de pedido es</div>
+    <div class="id" id="okId"></div>
+    <ol>
+      <li>Te enviamos los datos para completar el pago (transferencia o enlace).</li>
+      <li>Con el pago confirmado, te enviamos la prueba digital por WhatsApp en 24 horas o menos.</li>
+      <li>Apruebas la prueba (ajustamos juntos cualquier detalle menor).</li>
+      <li>Producimos en <span class="dias"></span> días laborables y entregamos.</li>
+    </ol>
+    <div class="acts">
+      <a class="btn" id="okWa" href="#" target="_blank" rel="noopener">Avisar por WhatsApp</a>
+      <button class="btn ghost" type="button" id="okClose">Cerrar</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+/* =====================================================================
+   CONFIGURACIÓN — edita solo esta parte
+   ===================================================================== */
+const CONFIG = {
+  // URL de tu Google Apps Script (ver GUIA.md). Vacío = modo demo (no envía nada).
+  ENDPOINT: "",
+  // URL opcional de un Apps Script propio que haga de proxy server-side a la consulta de RNC
+  // de la DGII (https://dgii.gov.do/app/WebApps/ConsultasWeb2/ConsultasWeb/consultas/rnc.aspx).
+  // La DGII no expone una API pública con CORS, así que el autocompletado de Razón Social
+  // solo funciona si configuras este proxy; vacío = modo manual (enlace para verificar a mano).
+  RNC_ENDPOINT: "",
+  WHATSAPP: "18495779893",                     // con código de país, sin + ni espacios
+  INSTAGRAM: "https://instagram.com/buenos.prints",
+  MONEDA: "RD$",
+  DIAS_PRODUCCION: "2 a 3",
+  ITBIS: 0.18,                 // ITBIS vigente en República Dominicana (ya incluido en los costos base)
+  PRECIO_UNITARIO_MINIMO: 5.00, // piso operativo RD$ por unidad, ITBIS incluido
+  MINIMO_PEDIDO: 800,      // monto mínimo de stickers/etiquetas por pedido (sin envío)
+  ENVIO_GRATIS_DESDE: 5000, // a partir de este subtotal, el envío a domicilio se vuelve gratis automáticamente
+
+  // Fotos de TUS stickers para el hero (5 idealmente, PNG con fondo transparente).
+  // Ej: ["img/sticker1.png","img/sticker2.png", ...]. Vacío = diseños de ejemplo.
+  HERO_STICKERS: [],
+  // Fotos de trabajos reales, tomadas de @buenos.prints en Instagram. Vacío = la sección no aparece.
+  TRABAJOS: [
+    "trabajos/vuelve-a-ti.png",
+    "trabajos/lul-film-lab.png",
+    "trabajos/casimente.png",
+    "trabajos/tomate-otra.png",
+    "trabajos/cafe-set.png",
+    "trabajos/pin-it-your-way.png",
+    "trabajos/logo-s.png",
+    "trabajos/custom-portrait.png",
+  ],
+  // Logos de marcas que confían en nosotros (PNG, fondo transparente). Vacío = la barra no aparece.
+  // "h" = alto en px de cada logo en la barra. La mayoría comparte el alto base (28px),
+  // pero los logos más angostos/verticales se ven ilegibles a ese alto, así que se agrandan
+  // individualmente: prioridad a que se lean bien por encima de compartir el mismo alto.
+  MARCAS: [
+    { logo: "logos/rulay-civica.png", nombre: "Rulay Cívica" },
+    { logo: "logos/casimente.png", nombre: "Casimente" },
+    { logo: "logos/fyeras.png", nombre: "Fyeras", h: 44 },
+    { logo: "logos/noname.png", nombre: "Noname" },
+    { logo: "logos/lui-film-lab.png", nombre: "Lui Film Lab", h: 36 },
+    { logo: "logos/bougroup.png", nombre: "Bougroup" },
+    { logo: "logos/simple-gang.png", nombre: "Simple Gang", h: 42 },
+    { logo: "logos/chainsaws.png", nombre: "Chainsaws" },
+    { logo: "logos/vuelve-a-la-vida.png", nombre: "Vuelve a la Vida", h: 50 },
+    { logo: "logos/rol.png", nombre: "Röl" },
+    { logo: "logos/zona-bici.png", nombre: "Zona Bici", h: 42 },
+  ],
+
+  PRODUCTOS: {
+    stickers: {
+      nombre: "Stickers troquelados",
+      costoBasePorPie2: 472.00,                  // RD$ por pie² (ITBIS 18% incluido)
+      formas: ["contorno", "circulo", "cuadrado", "redondeado"],
+      forma: "contorno",
+      tamanos: [ {id:"2",w:2,h:2}, {id:"3",w:3,h:3,tag:"Más pedido"}, {id:"4",w:4,h:4}, {id:"5",w:5,h:5} ],
+      tamano: "3",
+      cantidades: [25, 50, 100, 200, 300, 500, 1000],
+      cantidad: 100,
+    },
+    etiquetas: {
+      nombre: "Etiquetas",
+      costoBasePorPie2: 354.00,                  // RD$ por pie² (ITBIS 18% incluido)
+      formas: ["circulo", "redondeado", "cuadrado", "contorno"],
+      forma: "circulo",
+      tamanos: [ {id:"e15",w:1.5,h:1.5}, {id:"e2",w:2,h:2,tag:"Más pedido"}, {id:"e23",w:2,h:3}, {id:"e34",w:3,h:4} ],
+      tamano: "e2",
+      cantidades: [100, 250, 500, 1000, 2500],
+      cantidad: 250,
+    },
+    hojas: {
+      nombre: "Hojas de stickers",
+      costoBasePorPie2: 542.80,                  // base stickers (472) +15% por el corte de varios diseños en una misma lámina
+      formas: ["cuadrado"],                      // una hoja siempre es rectangular; los diseños internos vienen en el archivo que sube el cliente
+      forma: "cuadrado",
+      tamanos: [ {id:"mini",w:4,h:6}, {id:"media",w:5.5,h:8.5,tag:"Más pedido"}, {id:"carta",w:8.5,h:11} ],
+      tamano: "media",
+      cantidades: [10, 25, 50, 100, 250],
+      cantidad: 25,
+    },
+  },
+  MUESTRAS: { nombre: "Paquete de muestras", desc: "Gloss y matte en varias formas y tamaños", precio: 350 },
+
+  // Costo del servicio RUSH (entrega 24h tras aprobar la prueba), según el monto total del pedido.
+  // Tramos por "hasta" monto: el primer tramo cuyo `max` cubre el subtotal es el que aplica.
+  RUSH_FEE: [
+    { max: 2499.99, costo: 500  },   // menos de RD$2,500
+    { max: 5000,    costo: 750  },   // RD$2,500 a RD$5,000
+    { max: 10000,   costo: 1500 },   // RD$5,000.01 a RD$10,000
+    { max: Infinity, costo: 2000 },  // RD$10,001 o más
+  ],
+
+  // Escala única de descuento por volumen — tramos fijos por cantidad total de unidades.
+  // Los tramos de 5,000 y 10,000 unidades no aparecen como botón de cantidad: solo se
+  // activan si el cliente escribe esa cantidad a mano en "Otra". Tope máximo absoluto: 65%.
+  DESCUENTOS: [
+    { min: 0,     max: 99,        pct: 0.00 },
+    { min: 100,   max: 199,       pct: 0.15 },
+    { min: 200,   max: 299,       pct: 0.20 },
+    { min: 300,   max: 499,       pct: 0.25 },
+    { min: 500,   max: 999,       pct: 0.30 },
+    { min: 1000,  max: 2499,      pct: 0.40 },
+    { min: 2500,  max: 4999,      pct: 0.50 },
+    { min: 5000,  max: 9999,      pct: 0.60 },
+    { min: 10000, max: Infinity,  pct: 0.65 },
+  ],
+
+  MATERIALES: {
+    gloss: { nombre: "Vinil Gloss", desc: "Brillante, colores intensos" },
+    matte: { nombre: "Vinil Matte", desc: "Mate, look premium" },
+  },
+  FORMAS: {
+    contorno:   { nombre: "Troquelado", desc: "Sigue la silueta" },
+    circulo:    { nombre: "Círculo / óvalo", desc: "Redondo" },
+    cuadrado:   { nombre: "Cuadrado / rectángulo", desc: "Esquinas rectas" },
+    redondeado: { nombre: "Redondeado", desc: "Esquinas suaves" },
+  },
+  TAMANO_MIN: 1, TAMANO_MAX: 12,   // límites del tamaño personalizado (pulgadas)
+
+  // Métodos de envío. El primero es el default (Vimenpaq ⭐, igual que en el checkout de referencia).
+  ENTREGA: [
+    { id: "vimenpaq", nombre: "⭐ Vimenpaq (todo el país) — retiro en oficina",           desc: "Estimado 3–7 días hábiles", costo: 0,   direccion: false },
+    { id: "dn",       nombre: "Envío a domicilio — Distrito Nacional",                    desc: "Estimado 3–7 días hábiles", costo: 250, direccion: true },
+    { id: "sd",       nombre: "Envío a domicilio — Santo Domingo (Este, Oeste y Norte)",  desc: "Estimado 3–7 días hábiles", costo: 400, direccion: true },
+  ],
+
+  // Códigos de descuento. tipo "pct" = porcentaje del subtotal (antes de envío); "monto" = RD$ fijo.
+  CUPONES: {
+    BIENVENIDA10: { tipo: "pct",   valor: 0.10, desc: "10% de descuento" },
+  },
+
+  FORMATOS: ["png","jpg","jpeg","webp","svg","pdf","ai","eps","psd"],
+  MAX_MB_ARCHIVO: 15,
+  MAX_MB_TOTAL: 35,
+};
+/* ===================================================================== */
+
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+const IN_CM = 2.54;
+const IMG_EXT = ["png","jpg","jpeg","webp","svg"];
+const state = {
+  producto: "stickers", unidad: "in", material: "gloss", forma: "contorno",
+  tamano: "3", w: 3, h: 3, cantidad: 100, otra: false, otraValor: "",
+  archivo: null, ext: "", previewURL: null, imgW: null, imgH: null, enlace: "", notas: "",
+};
+let carrito = [];
+let cuponAplicado = null;
+let rushActivo = false;
+// Costo del RUSH según el subtotal del pedido (tramos en CONFIG.RUSH_FEE).
+function calcularCostoRush(sub) {
+  const tramo = CONFIG.RUSH_FEE.find(t => sub <= t.max);
+  return tramo ? tramo.costo : CONFIG.RUSH_FEE[CONFIG.RUSH_FEE.length - 1].costo;
+}
+const P = () => CONFIG.PRODUCTOS[state.producto];
+
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = n => CONFIG.MONEDA + " " + Math.round(n).toLocaleString("es-DO");
+const fmt2 = n => CONFIG.MONEDA + " " + n.toLocaleString("es-DO", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const medida = inch => state.unidad === "in" ? (+inch.toFixed(2)) + '"' : (+(inch * IN_CM).toFixed(1)) + " cm";
+const medidaTxt = (w, h) => `${medida(w)} × ${medida(h)}`;
+const pesoTxt = b => b > 1048576 ? (b / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(b / 1024)) + " KB";
+
+const redondear = v => Math.round((v + Number.EPSILON) * 100) / 100;
+
+// Área en pies²: (ancho_in × alto_in) / 144
+function calcularAreaPies2(w, h) { return (w * h) / 144; }
+
+// % de descuento por volumen según la cantidad total de unidades (tramos fijos, tope 65%).
+function obtenerDescuentoPorCantidad(q) {
+  const tramo = CONFIG.DESCUENTOS.find(t => q >= t.min && q <= t.max);
+  const pct = tramo ? tramo.pct : CONFIG.DESCUENTOS[CONFIG.DESCUENTOS.length - 1].pct;
+  return Math.min(pct, 0.65);
+}
+
+// Precio unitario base (ITBIS incluido) ANTES de descuento, con piso de precio mínimo operativo.
+function precioUnitarioBase(w, h, prod = state.producto) {
+  const area = calcularAreaPies2(w, h);
+  const precio = area * CONFIG.PRODUCTOS[prod].costoBasePorPie2;
+  return redondear(Math.max(precio, CONFIG.PRECIO_UNITARIO_MINIMO));
+}
+
+// Precio unitario final (ITBIS incluido) DESPUÉS del descuento por volumen.
+function precioUnitario(w, h, q, prod = state.producto) {
+  const base = precioUnitarioBase(w, h, prod);
+  const descuento = obtenerDescuentoPorCantidad(q);
+  return redondear(base * (1 - descuento));
+}
+
+// Desglose fiscal inverso: el total ya incluye el 18% de ITBIS.
+function desgloseFiscal(totalConItbis) {
+  const subtotal = redondear(totalConItbis / (1 + CONFIG.ITBIS));
+  const itbis = redondear(totalConItbis - subtotal);
+  return { subtotal, itbis, total: totalConItbis };
+}
+function cantidadActual() {
+  if (!state.otra) return state.cantidad;
+  const v = parseInt(state.otraValor, 10);
+  return isNaN(v) ? 0 : v;
+}
+const minCant = (prod = state.producto) => CONFIG.PRODUCTOS[prod].cantidades[0];
+
+/* ---------- Diseños de ejemplo (se reemplazan con HERO_STICKERS) ---------- */
+function burst(cx, cy, n, r1, r2) {
+  let p = [];
+  for (let i = 0; i < n * 2; i++) { const r = i % 2 ? r2 : r1, a = Math.PI * i / n - Math.PI / 2; p.push((cx + r * Math.cos(a)).toFixed(1) + "," + (cy + r * Math.sin(a)).toFixed(1)); }
+  return p.join(" ");
+}
+const T = 'font-family="Bricolage Grotesque,system-ui,sans-serif" font-weight="800" text-anchor="middle"';
+const DEMO = [
+  `<svg viewBox="0 0 200 200"><polygon points="${burst(100,100,14,96,74)}" fill="#FFC93C" stroke="#17140F" stroke-width="5" stroke-linejoin="round"/><circle cx="100" cy="100" r="58" fill="#FF4D2E" stroke="#17140F" stroke-width="5"/><circle cx="80" cy="90" r="7" fill="#17140F"/><circle cx="120" cy="90" r="7" fill="#17140F"/><path d="M76 112q24 26 48 0" fill="none" stroke="#17140F" stroke-width="6" stroke-linecap="round"/></svg>`,
+  `<svg viewBox="0 0 200 160"><path d="M20 14h160a16 16 0 0 1 16 16v76a16 16 0 0 1-16 16H82l-38 30 8-30H20A16 16 0 0 1 4 106V30A16 16 0 0 1 20 14z" fill="#2BB673" stroke="#17140F" stroke-width="5" stroke-linejoin="round"/><text x="100" y="84" ${T} font-size="48" fill="#FFF8EC">¡DALE!</text></svg>`,
+  `<svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="92" fill="#7CC6FE" stroke="#17140F" stroke-width="5"/><path d="M14 118q22-14 43 0t43 0 43 0 43 0v8a92 92 0 0 1-172 0z" fill="#FFF8EC" stroke="#17140F" stroke-width="5" stroke-linejoin="round"/><text x="100" y="98" ${T} font-size="40" fill="#17140F">HECHO</text><text x="100" y="158" ${T} font-size="26" fill="#17140F">EN RD</text></svg>`,
+  `<svg viewBox="0 0 200 180"><path d="M100 168C40 126 8 92 8 56A44 44 0 0 1 100 34a44 44 0 0 1 92 22c0 36-32 70-92 112z" fill="#FF8FC7" stroke="#17140F" stroke-width="5" stroke-linejoin="round"/><text x="100" y="92" ${T} font-size="30" fill="#17140F">GRACIAS</text><text x="100" y="120" text-anchor="middle" font-family="DM Sans,system-ui,sans-serif" font-weight="700" font-size="15" fill="#17140F">por tu compra</text></svg>`,
+  `<svg viewBox="0 0 200 200"><rect x="22" y="40" width="156" height="120" rx="26" fill="#17140F"/><rect x="34" y="52" width="132" height="96" rx="16" fill="#FFC93C"/><text x="100" y="94" ${T} font-size="26" fill="#17140F">STICKER</text><text x="100" y="126" ${T} font-size="26" fill="#FF4D2E">LOVER</text></svg>`,
+];
+const MINI = {
+  stickers: [DEMO[0], DEMO[1]],
+  etiquetas: [`<svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="92" fill="#FFF8EC" stroke="#17140F" stroke-width="5"/><circle cx="100" cy="100" r="76" fill="none" stroke="#17140F" stroke-width="2" stroke-dasharray="4 6"/><text x="100" y="92" ${T} font-size="30" fill="#17140F">MIEL</text><text x="100" y="124" text-anchor="middle" font-family="DM Sans,system-ui,sans-serif" font-weight="700" font-size="16" fill="#17140F">100% natural</text></svg>`,
+              `<svg viewBox="0 0 220 150"><rect x="6" y="6" width="208" height="138" rx="18" fill="#17140F"/><text x="110" y="72" ${T} font-size="32" fill="#FFC93C">CAFÉ</text><text x="110" y="104" text-anchor="middle" font-family="DM Sans,system-ui,sans-serif" font-weight="700" font-size="16" fill="#FFF8EC">Tostado medio · 340 g</text></svg>`],
+  muestras: [DEMO[3], DEMO[2]],
+  hojas: [`<svg viewBox="0 0 200 200"><rect x="14" y="14" width="172" height="172" rx="14" fill="#FFF8EC" stroke="#17140F" stroke-width="5"/><circle cx="60" cy="62" r="28" fill="#FF4D2E" stroke="#17140F" stroke-width="4"/><rect x="108" y="36" width="58" height="44" rx="10" fill="#7CC6FE" stroke="#17140F" stroke-width="4"/><circle cx="60" cy="140" r="26" fill="#FFC93C" stroke="#17140F" stroke-width="4"/><rect x="110" y="118" width="56" height="50" rx="12" fill="#FF8FC7" stroke="#17140F" stroke-width="4"/></svg>`,
+          `<svg viewBox="0 0 200 160"><rect x="10" y="10" width="180" height="140" rx="12" fill="#FFFFFF" stroke="#17140F" stroke-width="5"/><rect x="24" y="24" width="152" height="112" rx="6" fill="none" stroke="#17140F" stroke-width="2" stroke-dasharray="6 6"/><text x="100" y="92" ${T} font-size="24" fill="#17140F">TU HOJA</text></svg>`],
+};
+function renderCollage() {
+  const src = CONFIG.HERO_STICKERS.length ? CONFIG.HERO_STICKERS.slice(0, 5).map(u => `<img src="${esc(u)}" alt="">`) : DEMO;
+  $("#collage").innerHTML = src.map(s => `<div class="hs">${s}</div>`).join("");
+  $$("[data-art]").forEach(el => {
+    const [a, b] = MINI[el.dataset.art];
+    el.innerHTML = `<div class="hs" style="position:absolute;width:42%;left:12%;top:16%;--r:-8deg;animation:none;transform:rotate(-8deg)">${a}</div><div class="hs" style="position:absolute;width:40%;right:10%;top:28%;--r:7deg;animation:none;transform:rotate(7deg)">${b}</div>`;
+  });
+  if (CONFIG.TRABAJOS.length) {
+    $("#trabajos").hidden = false;
+    const nombreTrabajo = u => (u.split("/").pop() || "").replace(/\.[a-z0-9]+$/i, "").replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+    $("#gal").innerHTML = CONFIG.TRABAJOS.map(u => `<img src="${esc(u)}" alt="Stickers personalizados de Buenos Prints: ${esc(nombreTrabajo(u))}" loading="lazy">`).join("");
+  }
+  if (CONFIG.MARCAS.length) {
+    const item = m => `<span class="trustlogo" style="height:${m.h || 28}px"><img src="${esc(m.logo)}" alt="${esc(m.nombre)}" loading="lazy"></span>`;
+    $("#trustTrack").innerHTML = CONFIG.MARCAS.map(item).join("") + CONFIG.MARCAS.map(item).join("");
+  } else {
+    $(".trustbar").hidden = true;
+  }
+}
+
+const SHAPE_SVG = {
+  contorno: '<path d="M18 4c6 0 9 4 12 8s3 10-1 14-9 7-14 5-10-3-11-9 0-10 4-14 5-4 10-4z"/>',
+  circulo: '<circle cx="18" cy="18" r="14"/>',
+  cuadrado: '<rect x="4" y="4" width="28" height="28" rx="1"/>',
+  redondeado: '<rect x="4" y="4" width="28" height="28" rx="8"/>',
+};
+
+/* ---------- Producto ---------- */
+function setProducto(id, { scroll = false } = {}) {
+  if (!CONFIG.PRODUCTOS[id]) return;
+  state.producto = id;
+  const p = P();
+  state.forma = p.forma; state.tamano = p.tamano;
+  const t = p.tamanos.find(x => x.id === p.tamano); state.w = t.w; state.h = t.h;
+  state.cantidad = p.cantidad; state.otra = false; state.otraValor = "";
+  $$(".ptabs button").forEach(b => { const on = b.dataset.tab === id; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); });
+  $("#bTitle").textContent = p.nombre;
+  syncCustomInputs(); refrescar();
+  if (scroll) $("#pedido").scrollIntoView({ behavior: "smooth" });
+}
+
+/* ---------- Render de opciones ---------- */
+function renderMateriales() {
+  $("#materialesOpts").innerHTML = Object.entries(CONFIG.MATERIALES).map(([id, m]) => `
+    <label class="opt ${state.material === id ? "on" : ""}">
+      <input type="radio" name="material" value="${id}" ${state.material === id ? "checked" : ""}>
+      <span class="swatch ${id}"></span><span><b>${m.nombre}</b><small>${m.desc}</small></span>
+    </label>`).join("");
+}
+function renderFormas() {
+  $("#formas").innerHTML = P().formas.map(id => { const f = CONFIG.FORMAS[id]; return `
+    <label class="opt ${state.forma === id ? "on" : ""}">
+      <input type="radio" name="forma" value="${id}" ${state.forma === id ? "checked" : ""}>
+      <svg class="shape-ic" viewBox="0 0 36 36" fill="#FFC93C" stroke="#17140F" stroke-width="2.5" aria-hidden="true">${SHAPE_SVG[id]}</svg>
+      <span><b>${f.nombre}</b><small>${f.desc}</small></span>
+    </label>`; }).join("");
+}
+function renderTamanos() {
+  const q = cantidadActual() >= minCant() ? cantidadActual() : P().cantidad;
+  const cards = P().tamanos.map(t => `
+    <label class="opt col ${state.tamano === t.id ? "on" : ""}">
+      ${t.tag ? `<span class="tag">${t.tag}</span>` : ""}
+      <input type="radio" name="tamano" value="${t.id}" ${state.tamano === t.id ? "checked" : ""}>
+      <b>${medidaTxt(t.w, t.h)}</b><small>${fmt2(precioUnitario(t.w, t.h, q))} c/u</small>
+    </label>`);
+  cards.push(`
+    <label class="opt col ${state.tamano === "custom" ? "on" : ""}">
+      <input type="radio" name="tamano" value="custom" ${state.tamano === "custom" ? "checked" : ""}>
+      <b>Personalizado</b><small>Tu medida exacta</small>
+    </label>`);
+  $("#tamanos").innerHTML = cards.join("");
+  $("#customBox").classList.toggle("show", state.tamano === "custom");
+}
+function renderCantidades() {
+  const qs = P().cantidades;
+  const rows = qs.map(q => {
+    const u = precioUnitario(state.w, state.h, q);
+    const descuentoPct = Math.round(obtenerDescuentoPorCantidad(q) * 100);
+    const on = !state.otra && state.cantidad === q;
+    return `<label class="qrow ${on ? "on" : ""}">
+      ${P().cantidad === q ? `<span class="tag">Más pedido</span>` : ""}
+      <input type="radio" name="cantidad" value="${q}" ${on ? "checked" : ""}>
+      <span class="q">${q.toLocaleString("es-DO")}</span>
+      <span class="qp">${fmt(u * q)}<small>${fmt2(u)} c/u</small></span>
+      ${descuentoPct > 0 ? `<span class="save">-${descuentoPct}%</span>` : "<span></span>"}
+    </label>`;
+  });
+  rows.push(`<label class="qrow ${state.otra ? "on" : ""}">
+      <input type="radio" name="cantidad" value="otra" ${state.otra ? "checked" : ""}>
+      <span class="q">Otra</span>
+      <input type="number" id="otraQty" min="${qs[0]}" step="1" inputmode="numeric" placeholder="Mín. ${qs[0]}" value="${esc(state.otraValor)}" aria-label="Otra cantidad">
+      <span></span>
+    </label>`);
+  $("#cantidades").innerHTML = rows.join("");
+}
+function renderOpciones() { renderMateriales(); renderFormas(); renderTamanos(); renderCantidades(); }
+
+/* ---------- Vista previa ---------- */
+function updatePreview() {
+  $("#stage").className = `stage ${state.material} f-${state.forma}`;
+  const S = Math.min(44, 220 / Math.max(state.w, state.h, 0.1));
+  const pv = $("#pv");
+  pv.style.width = Math.round(state.w * S) + "px";
+  pv.style.height = Math.round(state.h * S) + "px";
+  $("#dimtag").textContent = medidaTxt(state.w, state.h);
+
+  const img = $("#pvImg"), ph = $("#ph"), sheen = $("#sheen");
+  if (state.previewURL) {
+    if (img.getAttribute("src") !== state.previewURL) img.src = state.previewURL;
+    img.hidden = false; ph.hidden = true;
+  } else {
+    img.hidden = true; img.removeAttribute("src"); ph.hidden = false;
+    ph.textContent = state.archivo ? state.ext.toUpperCase() + " ✓" : "TU DISEÑO";
+  }
+  const mask = state.forma === "contorno" && state.previewURL ? `url("${state.previewURL}")` : "";
+  sheen.style.webkitMaskImage = mask; sheen.style.maskImage = mask;
+  sheen.style.borderRadius = state.forma === "contorno" && !state.previewURL ? "42% 58% 55% 45%/52% 44% 56% 48%" : "";
+
+  const qb = $("#quality");
+  let cls = "", txt = "";
+  if (state.archivo) {
+    if (state.ext === "svg") { cls = "ok"; txt = "Vectorial: calidad perfecta"; }
+    else if (state.imgW) {
+      const dpi = Math.round(Math.max(state.imgW, state.imgH) / Math.max(state.w, state.h));
+      if (dpi >= 300) { cls = "ok"; txt = `Excelente calidad (${dpi} dpi)`; }
+      else if (dpi >= 150) { cls = "mid"; txt = `Calidad aceptable (${dpi} dpi)`; }
+      else { cls = "low"; txt = `Baja resolución (${dpi} dpi): puede verse pixelado`; }
+    } else if (!IMG_EXT.includes(state.ext)) { cls = "ok"; txt = "Revisaremos tu archivo en la prueba digital"; }
+  }
+  qb.className = "quality " + cls;
+  qb.hidden = !txt;
+  qb.firstElementChild.textContent = txt;
+}
+
+/* ---------- Resumen ---------- */
+const validarTamano = () => state.w >= CONFIG.TAMANO_MIN && state.h >= CONFIG.TAMANO_MIN && state.w <= CONFIG.TAMANO_MAX && state.h <= CONFIG.TAMANO_MAX;
+function motivoBloqueo() {
+  const q = cantidadActual();
+  if (!state.archivo && !/^https?:\/\/\S+\.\S+/.test(state.enlace)) return "archivo";
+  if (!validarTamano()) return `El tamaño debe estar entre ${medida(CONFIG.TAMANO_MIN)} y ${medida(CONFIG.TAMANO_MAX)} por lado.`;
+  if (!q || q < minCant()) return `La cantidad mínima es ${minCant()} unidades.`;
+  return "";
+}
+function updateSummary() {
+  const q = cantidadActual();
+  const ok = q >= minCant() && validarTamano();
+  const u = ok ? precioUnitario(state.w, state.h, q) : 0;
+  const descuentoPct = ok ? obtenerDescuentoPorCantidad(q) : 0;
+  const ahorro = ok && descuentoPct > 0 ? redondear((precioUnitarioBase(state.w, state.h) - u) * q) : 0;
+  $("#specs").innerHTML = `
+    <dt>Producto</dt><dd>${P().nombre}</dd>
+    <dt>Material</dt><dd>${CONFIG.MATERIALES[state.material].nombre}</dd>
+    <dt>Forma</dt><dd>${CONFIG.FORMAS[state.forma].nombre}</dd>
+    <dt>Tamaño</dt><dd>${medidaTxt(state.w, state.h)}</dd>
+    <dt>Cantidad</dt><dd>${q ? q.toLocaleString("es-DO") : "—"}</dd>
+    ${ok && descuentoPct > 0 ? `<dt>Descuento por volumen</dt><dd>-${Math.round(descuentoPct * 100)}% <span style="color:var(--ok-fg);font-weight:700">(ahorras ${fmt(ahorro)})</span></dd>` : ""}`;
+  $("#unitP").textContent = ok ? fmt2(u) : "—";
+  $("#totalP").textContent = ok ? fmt(u * q) : "—";
+  $("#mbTotal").textContent = ok ? fmt(u * q) : "—";
+  $("#mbSpecs").textContent = `${q || "—"} × ${medidaTxt(state.w, state.h)} · ${CONFIG.MATERIALES[state.material].nombre}`;
+  const m = motivoBloqueo();
+  const hint = $("#addHint");
+  hint.classList.remove("alert");
+  hint.textContent = m === "archivo" ? "Primero sube tu diseño en el paso 1." : m;
+}
+function refrescar() { renderOpciones(); updatePreview(); updateSummary(); }
+
+/* ---------- Archivo ---------- */
+function setArchivo(file) {
+  if (!file) return;
+  const ext = (file.name.split(".").pop() || "").toLowerCase();
+  if (!CONFIG.FORMATOS.includes(ext)) { toast("Ese formato no lo aceptamos. Usa PNG, PDF, AI, SVG, EPS, PSD o JPG."); return; }
+  if (file.size > CONFIG.MAX_MB_ARCHIVO * 1048576) {
+    toast(`El archivo pesa más de ${CONFIG.MAX_MB_ARCHIVO} MB. Pega un enlace de Google Drive o WeTransfer.`);
+    $("#altBox").open = true; return;
+  }
+  state.archivo = file; state.ext = ext; state.imgW = state.imgH = null;
+  state.previewURL = IMG_EXT.includes(ext) ? URL.createObjectURL(file) : null;
+  if (state.previewURL && ext !== "svg") {
+    const im = new Image();
+    im.onload = () => { state.imgW = im.naturalWidth; state.imgH = im.naturalHeight; updatePreview(); };
+    im.src = state.previewURL;
+  }
+  $("#stepFile").classList.remove("need");
+  renderDrop(); updatePreview(); updateSummary();
+}
+function quitarArchivo() {
+  if (state.previewURL) URL.revokeObjectURL(state.previewURL);
+  state.archivo = null; state.previewURL = null; state.ext = ""; state.imgW = state.imgH = null;
+  $("#file").value = "";
+  renderDrop(); updatePreview(); updateSummary();
+}
+function base64ToFile(base64, nombre, tipo) {
+  const bin = atob(base64);
+  const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new File([arr], nombre, { type: tipo || "application/octet-stream" });
+}
+/* Trae un diseño del carrito de vuelta al configurador para modificarlo, en vez de forzar quitar + rehacer. */
+function editarItem(id) {
+  const i = carrito.find(x => x.id === id);
+  const p = i ? CONFIG.PRODUCTOS[i.producto] : null;
+  if (!i || i.producto === "muestras" || !p) return;
+  carrito = carrito.filter(x => x.id !== id);
+
+  state.producto = i.producto;
+  state.material = Object.keys(CONFIG.MATERIALES).find(k => CONFIG.MATERIALES[k].nombre === i.material) || state.material;
+  state.forma = Object.keys(CONFIG.FORMAS).find(k => CONFIG.FORMAS[k].nombre === i.forma) || p.forma;
+  state.w = i.w; state.h = i.h;
+  const t = p.tamanos.find(x => x.w === i.w && x.h === i.h);
+  state.tamano = t ? t.id : "custom";
+  if (p.cantidades.includes(i.cantidad)) { state.otra = false; state.cantidad = i.cantidad; state.otraValor = ""; }
+  else { state.otra = true; state.otraValor = String(i.cantidad); }
+  state.notas = i.notas || ""; state.enlace = i.enlace || "";
+
+  $$(".ptabs button").forEach(b => { const on = b.dataset.tab === i.producto; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); });
+  $("#bTitle").textContent = p.nombre;
+  syncCustomInputs(); renderOpciones();
+
+  if (i.base64) { setArchivo(base64ToFile(i.base64, i.nombre, i.tipo)); }
+  else { quitarArchivo(); }
+  $("#enlace").value = state.enlace;
+  if (state.enlace) $("#altBox").open = true;
+  $("#notas").value = state.notas;
+  updatePreview(); updateSummary();
+
+  renderCarrito();
+  $("#pedido").scrollIntoView({ behavior: "smooth" });
+  toast("Ajusta lo que necesites y agrégalo de nuevo a tu pedido.");
+}
+function renderDrop() {
+  const has = !!state.archivo;
+  $("#dropEmpty").hidden = has; $("#dropFile").hidden = !has;
+  if (has) { $("#fExt").textContent = state.ext; $("#fName").textContent = state.archivo.name; $("#fSize").textContent = pesoTxt(state.archivo.size); }
+}
+const leerBase64 = (file, onProgress) => new Promise((res, rej) => {
+  const r = new FileReader();
+  r.onprogress = e => { if (onProgress && e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100)); };
+  r.onload = () => res(String(r.result).split(",")[1]);
+  r.onerror = () => rej(new Error("No se pudo leer el archivo"));
+  r.readAsDataURL(file);
+});
+
+/* ---------- Carrito ---------- */
+let agregando = false;
+async function agregar() {
+  if (agregando) return;
+  const m = motivoBloqueo();
+  if (m) {
+    const hint = $("#addHint");
+    hint.classList.add("alert");
+    if (m === "archivo") {
+      const st = $("#stepFile");
+      st.classList.remove("need"); void st.offsetWidth; st.classList.add("need");
+      st.scrollIntoView({ behavior: "smooth", block: "center" });
+      toast("Sube tu diseño en el paso 1 para agregarlo al pedido.");
+    } else toast(m);
+    return;
+  }
+  agregando = true;
+  const addBtn = $("#addBtn");
+  const addBtnTxt = addBtn.textContent;
+  addBtn.classList.add("wait");
+  try {
+    const q = cantidadActual();
+    const u = precioUnitario(state.w, state.h, q);
+    const descuentoPct = obtenerDescuentoPorCantidad(q);
+    const base64 = state.archivo
+      ? await leerBase64(state.archivo, pct => { if (pct < 100) addBtn.textContent = `Subiendo… ${pct}%`; else addBtn.textContent = "Agregando…"; })
+      : null;
+    carrito.push({
+      id: String(Date.now()) + Math.floor(Math.random() * 1000),
+      producto: state.producto, productoNombre: P().nombre,
+      nombre: state.archivo ? state.archivo.name : "Diseño por enlace",
+      tipo: state.archivo ? (state.archivo.type || "application/octet-stream") : "",
+      ext: state.archivo ? state.ext : "link",
+      base64, thumb: state.previewURL, enlace: state.enlace, notas: state.notas,
+      material: CONFIG.MATERIALES[state.material].nombre, forma: CONFIG.FORMAS[state.forma].nombre,
+      w: state.w, h: state.h, tamanoTxt: medidaTxt(state.w, state.h),
+      cantidad: q, unit: u, descuentoPct, subtotal: redondear(u * q),
+    });
+    state.archivo = null; state.previewURL = null; state.ext = ""; state.imgW = state.imgH = null;
+    state.enlace = ""; state.notas = "";
+    $("#file").value = ""; $("#enlace").value = ""; $("#notas").value = "";
+    renderDrop(); updatePreview(); updateSummary(); renderCarrito();
+    toast("Diseño agregado a tu pedido.");
+    $("#checkout").scrollIntoView({ behavior: "smooth" });
+  } catch (e) { toast(e.message); }
+  finally { agregando = false; addBtn.classList.remove("wait"); addBtn.textContent = addBtnTxt; }
+}
+function agregarMuestras() {
+  if (carrito.some(i => i.producto === "muestras")) { toast("Ya tienes el paquete de muestras en tu pedido."); $("#checkout").scrollIntoView({ behavior: "smooth" }); return; }
+  const M = CONFIG.MUESTRAS;
+  carrito.push({ id: "m" + Date.now(), producto: "muestras", productoNombre: M.nombre, nombre: M.nombre, ext: "kit", base64: null, thumb: null, enlace: "", notas: "", material: "Gloss y matte", forma: "Varias", w: 0, h: 0, tamanoTxt: "Varios", cantidad: 1, unit: M.precio, descuentoPct: 0, subtotal: M.precio, desc: M.desc });
+  renderCarrito(); toast("Paquete de muestras agregado.");
+  $("#checkout").scrollIntoView({ behavior: "smooth" });
+}
+const subProductos = () => carrito.filter(i => i.producto !== "muestras").reduce((a, i) => a + i.subtotal, 0);
+const subtotalCarrito = () => carrito.reduce((a, i) => a + i.subtotal, 0);
+function montoParaEnvioGratis() {
+  const sub = subtotalCarrito();
+  const rush = rushActivo ? calcularCostoRush(sub) : 0;
+  return sub + rush;
+}
+const envioGratisActivo = () => montoParaEnvioGratis() >= CONFIG.ENVIO_GRATIS_DESDE;
+function entregaSel() {
+  const id = ($("#entregas") || {}).value || CONFIG.ENTREGA[0].id;
+  const base = CONFIG.ENTREGA.find(e => e.id === id) || CONFIG.ENTREGA[0];
+  return envioGratisActivo() && base.costo > 0 ? { ...base, costo: 0, gratisPromo: true } : base;
+}
+// Descuento del cupón aplicado (si hay uno), sobre el subtotal de productos antes de envío.
+function descuentoCupon(sub) {
+  if (!cuponAplicado) return 0;
+  const d = cuponAplicado.tipo === "pct" ? sub * cuponAplicado.valor : cuponAplicado.valor;
+  return Math.min(redondear(d), sub);
+}
+function aplicarCupon() {
+  const input = $("#cuponInput"), msg = $("#cuponMsg");
+  const code = input.value.trim().toUpperCase();
+  msg.hidden = false;
+  if (!code) { msg.textContent = "Escribe un código de descuento."; return; }
+  const c = CONFIG.CUPONES[code];
+  if (!c) {
+    cuponAplicado = null;
+    msg.style.color = "var(--accent)";
+    msg.textContent = `El código "${code}" no es válido.`;
+  } else {
+    cuponAplicado = { codigo: code, ...c };
+    msg.style.color = "var(--ok-fg)";
+    msg.textContent = `Código "${code}" aplicado: ${c.desc}.`;
+  }
+  renderTotales();
+}
+function renderCarrito() {
+  $("#cartCount").textContent = carrito.length;
+  if (!carrito.length) {
+    $("#lines").innerHTML = `<div class="empty">Tu pedido está vacío. <a href="#pedido">Agrega tu primer diseño</a>.</div>`;
+    $("#totals").hidden = true; $("#form").hidden = true; $("#cuponBox").hidden = true; return;
+  }
+  $("#cuponBox").hidden = false;
+  $("#lines").innerHTML = carrito.map(i => {
+    const th = i.thumb ? `<div class="thumb" style="background-image:url('${i.thumb}')"></div>` : `<div class="thumb">${esc(i.ext)}</div>`;
+    const specs = i.producto === "muestras" ? esc(i.desc) : `${esc(i.productoNombre)} · ${esc(i.material)} · ${esc(i.forma)} · ${esc(i.tamanoTxt)} · ${i.cantidad.toLocaleString("es-DO")} uds${i.descuentoPct ? ` · -${Math.round(i.descuentoPct * 100)}%` : ""}`;
+    return `<div class="line">${th}
+      <div style="min-width:0"><b>${esc(i.nombre)}</b>
+        <div class="specs">${specs}</div>
+        ${i.notas ? `<div class="specs">“${esc(i.notas)}”</div>` : ""}
+        ${i.producto !== "muestras" ? `<button class="linkbtn" type="button" data-edit="${esc(i.id)}">Editar</button> · ` : ""}<button class="linkbtn" type="button" data-remove="${esc(i.id)}">Quitar</button>
+      </div>
+      <div class="lp">${fmt(i.subtotal)}${i.producto !== "muestras" ? `<div class="specs">${fmt2(i.unit)} c/u</div>` : ""}</div>
+    </div>`;
+  }).join("") + `<div class="cartfoot">
+      <a class="btn sm ghost" href="#pedido">+ Agregar otro diseño</a>
+      <button type="button" class="btn sm ghost" data-rush-toggle>${rushActivo ? "✕ Quitar servicio RUSH" : `⚡ Agregar RUSH (+${fmt(calcularCostoRush(subtotalCarrito()))})`}</button>
+      <button type="button" class="btn sm ghost" data-print-resumen>🖨️ Imprimir resumen</button>
+    </div>`;
+  $("#form").hidden = false;
+  renderTotales();
+}
+function renderTotales() {
+  renderEntrega();
+  const sub = subtotalCarrito(), ent = entregaSel();
+  const desc = descuentoCupon(sub);
+  const rush = rushActivo ? calcularCostoRush(sub) : 0;
+  const total = Math.max(0, sub - desc) + ent.costo + rush;
+  $("#totals").hidden = false;
+  $("#totals").innerHTML = `
+    <div><span>Subtotal (${carrito.length} artículo${carrito.length > 1 ? "s" : ""})</span><span>${fmt(sub)}</span></div>
+    <div style="justify-content:flex-end"><span class="muted" style="font-size:12.5px">ITBIS incluido</span></div>
+    ${rush > 0 ? `<div><span>⚡ Servicio RUSH (entrega en 24h)</span><span>${fmt(rush)}</span></div>` : ""}
+    ${desc > 0 ? `<div><span>Cupón ${esc(cuponAplicado.codigo)}</span><span style="color:var(--ok-fg)">-${fmt(desc)}</span></div>` : ""}
+    <div><span>Entrega: ${esc(ent.nombre)}</span><span>${ent.costo ? fmt(ent.costo) : ent.gratisPromo ? `<s class="muted" style="font-weight:400">${fmt(CONFIG.ENTREGA.find(x => x.id === ent.id).costo)}</s> Gratis` : "Gratis"}</span></div>
+    <div class="grand"><span>Total a pagar</span><span>${fmt(total)}</span></div>`;
+  const sp = subProductos(), falta = sp > 0 ? CONFIG.MINIMO_PEDIDO - sp : 0;
+  $("#minNotice").hidden = falta <= 0;
+  $("#minNotice").textContent = falta > 0 ? `El pedido mínimo de stickers y etiquetas es ${fmt(CONFIG.MINIMO_PEDIDO)}. Te faltan ${fmt(falta)}: sube la cantidad o agrega otro diseño.` : "";
+  $("#dirBox").hidden = !ent.direccion;
+  const faltaEnvio = CONFIG.ENVIO_GRATIS_DESDE - montoParaEnvioGratis();
+  $("#envioNotice").hidden = carrito.length === 0;
+  $("#envioNotice").classList.toggle("ok", faltaEnvio <= 0);
+  $("#envioNotice").textContent = faltaEnvio > 0
+    ? `Te faltan ${fmt(faltaEnvio)} para envío a domicilio gratis (aplicado automático desde ${fmt(CONFIG.ENVIO_GRATIS_DESDE)}).`
+    : `✓ Envío a domicilio gratis aplicado: tu pedido supera ${fmt(CONFIG.ENVIO_GRATIS_DESDE)}.`;
+}
+function renderEntrega() {
+  const gratis = envioGratisActivo();
+  const prev = ($("#entregas") || {}).value;
+  $("#entregas").innerHTML = CONFIG.ENTREGA.map((e, i) => {
+    const costo = gratis ? 0 : e.costo;
+    const sel = prev ? e.id === prev : i === 0;
+    return `<option value="${e.id}" ${sel ? "selected" : ""}>${esc(e.nombre)} — ${costo ? fmt(costo) : "Gratis"}</option>`;
+  }).join("");
+}
+/* ---------- Envío del pedido ---------- */
+$("#form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const form = e.target, f = new FormData(form);
+  if (!form.checkValidity()) { form.reportValidity(); toast("Completa tus datos y marca la casilla de derechos."); return; }
+  const ent = entregaSel();
+  if (ent.direccion && !String(f.get("direccion") || "").trim()) { toast("Escribe la dirección de entrega."); $("#direccion").focus(); return; }
+  const sp = subProductos();
+  if (sp > 0 && sp < CONFIG.MINIMO_PEDIDO) { toast($("#minNotice").textContent); $("#minNotice").scrollIntoView({ behavior: "smooth", block: "center" }); return; }
+  const bytes = carrito.reduce((a, i) => a + (i.base64 ? i.base64.length * 0.75 : 0), 0);
+  if (bytes > CONFIG.MAX_MB_TOTAL * 1048576) { toast(`Tus archivos suman más de ${CONFIG.MAX_MB_TOTAL} MB. Usa enlaces de Drive para los más pesados.`); return; }
+
+  const sub = subtotalCarrito();
+  const descCupon = descuentoCupon(sub);
+  const costoRush = rushActivo ? calcularCostoRush(sub) : 0;
+  const payload = {
+    website: f.get("website") || "",
+    cliente: { nombre: f.get("nombre"), razonSocial: f.get("razonSocial"), whatsapp: f.get("whatsapp"), email: f.get("email"), rnc: f.get("rnc") },
+    entrega: { tipo: ent.nombre, costo: ent.costo, direccion: ent.direccion ? f.get("direccion") : "" },
+    fechaDeseada: f.get("fecha") || "",
+    notas: f.get("notasPedido") || "",
+    items: carrito.map(i => ({
+      producto: i.productoNombre, nombreArchivo: i.nombre, enlace: i.enlace, notas: i.notas,
+      material: i.material, forma: i.forma,
+      tamano: i.tamanoTxt.replace(/"/g, " pulg"), anchoPulg: +i.w.toFixed(2), altoPulg: +i.h.toFixed(2),
+      cantidad: i.cantidad, precioUnit: +i.unit.toFixed(2), descuentoPct: i.descuentoPct || 0, subtotal: i.subtotal,
+      archivo: i.base64 ? { nombre: i.nombre, tipo: i.tipo, base64: i.base64 } : null,
+    })),
+    cupon: cuponAplicado && descCupon > 0 ? { codigo: cuponAplicado.codigo, descuento: descCupon } : null,
+    rush: rushActivo ? { horas: 24, costo: costoRush } : null,
+    subtotal: sub, descuentoCupon: descCupon, envio: ent.costo, total: Math.max(0, sub - descCupon) + ent.costo + costoRush,
+  };
+
+  const btn = $("#sendBtn");
+  btn.disabled = true; btn.textContent = "Subiendo archivos…";
+  try {
+    let pedido, demo = false;
+    if (!CONFIG.ENDPOINT) {
+      await new Promise(r => setTimeout(r, 900));
+      pedido = "DEMO-" + Math.floor(1000 + Math.random() * 9000); demo = true;
+    } else {
+      const r = await fetch(CONFIG.ENDPOINT, { method: "POST", body: JSON.stringify(payload) });
+      const o = await r.json();
+      if (!o.ok) throw new Error(o.error || "No se pudo registrar");
+      pedido = o.pedido;
+    }
+    mostrarExito(pedido, payload, demo);
+    carrito = []; cuponAplicado = null; rushActivo = false; $("#cuponInput").value = ""; $("#cuponMsg").hidden = true;
+    form.reset(); renderEntrega(); renderCarrito();
+  } catch (err) {
+    toast("No pudimos enviar tu pedido (" + err.message + "). Intenta de nuevo o escríbenos por WhatsApp.");
+  } finally {
+    btn.textContent = "Enviar pedido"; btn.disabled = false;
+  }
+});
+
+const waLink = msg => `https://wa.me/${CONFIG.WHATSAPP}?text=${encodeURIComponent(msg)}`;
+
+// Mensaje legible (con emojis y saltos de línea) para transparencia fiscal en WhatsApp:
+// Producto, Dimensiones, Cantidad, Descuento aplicado, Subtotal, ITBIS desglosado y Total neto.
+function construirMensajeWhatsApp(id, p) {
+  const lineas = [`🎨 *Pedido ${id} — Buenos Prints*`, ""];
+  p.items.forEach((it, i) => {
+    const fiscal = desgloseFiscal(it.subtotal);
+    lineas.push(`— Artículo ${i + 1} —`);
+    lineas.push(`🏷️ Producto: ${it.producto}`);
+    lineas.push(`📐 Dimensiones: ${it.tamano}`);
+    lineas.push(`🔢 Cantidad: ${it.cantidad.toLocaleString("es-DO")} unidades`);
+    lineas.push(`🎁 Descuento aplicado: ${Math.round(it.descuentoPct * 100)}%`);
+    lineas.push(`💵 Subtotal (sin ITBIS): ${fmt2(fiscal.subtotal)}`);
+    lineas.push(`🧾 ITBIS (18%): ${fmt2(fiscal.itbis)}`);
+    lineas.push(`✅ Total artículo (ITBIS incl.): ${fmt2(it.subtotal)}`);
+    lineas.push("");
+  });
+  const fiscalTotal = desgloseFiscal(p.subtotal);
+  lineas.push("———————————————");
+  lineas.push(`💵 Subtotal general (sin ITBIS): ${fmt2(fiscalTotal.subtotal)}`);
+  lineas.push(`🧾 ITBIS total (18%): ${fmt2(fiscalTotal.itbis)}`);
+  if (p.cupon) lineas.push(`🎟️ Cupón ${p.cupon.codigo}: -${fmt(p.cupon.descuento)}`);
+  if (p.rush) lineas.push(`⚡ Servicio RUSH (entrega en ${p.rush.horas}h): ${fmt(p.rush.costo)}`);
+  if (p.envio) lineas.push(`🚚 Entrega: ${fmt(p.envio)}`);
+  lineas.push(`✅ *TOTAL NETO A PAGAR: ${fmt(p.total)}*`);
+  lineas.push("");
+  lineas.push("Quedo atento a los datos de pago para completarlo antes de la prueba digital. ¡Gracias!");
+  return lineas.join("\n");
+}
+
+function mostrarExito(id, p, demo) {
+  $("#okId").textContent = id;
+  $("#demoNote").innerHTML = demo ? `<div class="demo">Modo demo: el pedido no se envió. Configura ENDPOINT para recibir pedidos reales.</div>` : "";
+  $("#okWa").href = waLink(construirMensajeWhatsApp(id, p));
+  $("#ok").showModal();
+}
+
+let toastT;
+function toast(msg) {
+  const t = $("#toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 4200);
+}
+
+/* ---------- Eventos ---------- */
+document.addEventListener("change", e => {
+  const t = e.target;
+  if (t.name === "material") { state.material = t.value; refrescar(); }
+  else if (t.name === "forma") { state.forma = t.value; refrescar(); }
+  else if (t.name === "tamano") {
+    state.tamano = t.value;
+    if (t.value !== "custom") { const s = P().tamanos.find(x => x.id === t.value); state.w = s.w; state.h = s.h; }
+    syncCustomInputs(); refrescar();
+  }
+  else if (t.name === "cantidad") {
+    if (t.value === "otra") { state.otra = true; refrescar(); $("#otraQty").focus(); }
+    else { state.otra = false; state.cantidad = +t.value; refrescar(); }
+  }
+  else if (t.name === "entrega") {
+    renderTotales();
+  }
+});
+document.addEventListener("focusin", e => {
+  if (e.target.id === "otraQty" && !state.otra) {
+    state.otra = true;
+    $$("#cantidades .qrow").forEach(r => r.classList.toggle("on", r.contains(e.target)));
+    e.target.closest(".qrow").querySelector("input[type=radio]").checked = true;
+    updateSummary();
+  }
+});
+document.addEventListener("input", e => { if (e.target.id === "otraQty") { state.otraValor = e.target.value; updateSummary(); } });
+document.addEventListener("click", e => {
+  const ed = e.target.closest("[data-edit]");
+  if (ed) { editarItem(ed.dataset.edit); return; }
+  const r = e.target.closest("[data-remove]");
+  if (r) { carrito = carrito.filter(i => i.id !== r.dataset.remove); renderCarrito(); return; }
+  const rt = e.target.closest("[data-rush-toggle]");
+  if (rt) {
+    rushActivo = !rushActivo;
+    toast(rushActivo ? `Servicio RUSH agregado (${fmt(calcularCostoRush(subtotalCarrito()))}).` : "Servicio RUSH removido.");
+    renderCarrito();
+    return;
+  }
+  if (e.target.closest("[data-print-resumen]")) { window.print(); return; }
+  const p = e.target.closest("[data-producto]");
+  if (p) {
+    e.preventDefault(); setProducto(p.dataset.producto, { scroll: true }); cerrarMenu();
+    if (p.closest(".ctas")) {
+      $$(".ctas .cta").forEach(a => a.classList.toggle("sel", a === p));
+      $("#chipMinimos").textContent = HERO_INFO[p.dataset.producto] || chipDefaultTxt;
+    }
+    return;
+  }
+  if (e.target.closest(".drawer a")) cerrarMenu();
+});
+
+function syncCustomInputs() {
+  const k = state.unidad === "in" ? 1 : IN_CM;
+  $("#cw").value = +(state.w * k).toFixed(state.unidad === "in" ? 2 : 1);
+  $("#ch").value = +(state.h * k).toFixed(state.unidad === "in" ? 2 : 1);
+  $$(".ulabel").forEach(l => l.textContent = state.unidad === "in" ? "pulg" : "cm");
+  $("#customHint").textContent = `Entre ${medida(CONFIG.TAMANO_MIN)} y ${medida(CONFIG.TAMANO_MAX)} por lado.`;
+}
+function leerCustom() {
+  const k = state.unidad === "in" ? 1 : IN_CM;
+  const w = parseFloat($("#cw").value) / k, h = parseFloat($("#ch").value) / k;
+  if (!isNaN(w)) state.w = w;
+  if (!isNaN(h)) state.h = h;
+  renderTamanos(); renderCantidades(); updatePreview(); updateSummary();
+}
+$("#cw").addEventListener("input", leerCustom);
+$("#ch").addEventListener("input", leerCustom);
+$$(".units button").forEach(b => b.addEventListener("click", () => {
+  state.unidad = b.dataset.unit;
+  $$(".units button").forEach(x => x.classList.toggle("on", x === b));
+  syncCustomInputs(); refrescar();
+}));
+$$(".ptabs button").forEach(b => b.addEventListener("click", () => setProducto(b.dataset.tab)));
+
+const drop = $("#drop");
+$("#file").addEventListener("change", e => setArchivo(e.target.files[0]));
+["dragenter", "dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => setArchivo(e.dataTransfer.files[0]));
+$("#fRemove").addEventListener("click", e => { e.preventDefault(); e.stopPropagation(); quitarArchivo(); });
+$("#enlace").addEventListener("input", e => { state.enlace = e.target.value.trim(); updateSummary(); });
+$("#notas").addEventListener("input", e => { state.notas = e.target.value; });
+$("#addBtn").addEventListener("click", agregar);
+$("#mbAdd").addEventListener("click", agregar);
+$("#muestrasBtn").addEventListener("click", agregarMuestras);
+$("#muestrasCard").addEventListener("click", e => { e.preventDefault(); agregarMuestras(); });
+$("#okClose").addEventListener("click", () => $("#ok").close());
+
+/* ---------- Cupón de descuento ---------- */
+$("#cuponBtn").addEventListener("click", aplicarCupon);
+$("#cuponInput").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); aplicarCupon(); } });
+
+/* ---------- RNC (DGII) → autocompletar Razón Social ----------
+   La DGII no ofrece una consulta de RNC con API pública/CORS (es un formulario ASP.NET
+   pensado para uso manual en el navegador). Si configuras CONFIG.RNC_ENDPOINT con un
+   proxy propio (p.ej. un Apps Script que haga la consulta server-side), se usa para
+   autocompletar; si no, se muestra un enlace para verificar el RNC a mano en la DGII. */
+let rncTimer;
+$("#rnc").addEventListener("input", e => {
+  clearTimeout(rncTimer);
+  const digitos = e.target.value.replace(/\D/g, "");
+  $("#rncMsg").hidden = true;
+  if (digitos.length === 9 || digitos.length === 11) rncTimer = setTimeout(() => buscarRNC(digitos), 500);
+});
+async function buscarRNC(rnc) {
+  const msg = $("#rncMsg");
+  msg.hidden = false;
+  if (!CONFIG.RNC_ENDPOINT) {
+    msg.innerHTML = `No podemos validarlo automáticamente desde aquí (la DGII no tiene consulta pública). <a href="https://dgii.gov.do/app/WebApps/ConsultasWeb2/ConsultasWeb/consultas/rnc.aspx" target="_blank" rel="noopener">Verificar en la DGII ↗</a> y escribe la Razón Social a mano.`;
+    return;
+  }
+  msg.style.color = "var(--muted)"; msg.textContent = "Buscando en la DGII…";
+  try {
+    const r = await fetch(`${CONFIG.RNC_ENDPOINT}?rnc=${rnc}`);
+    const o = await r.json();
+    if (o && o.razonSocial) {
+      $("#razonSocial").value = o.razonSocial;
+      msg.style.color = "var(--ok-fg)"; msg.textContent = `✓ ${o.razonSocial}`;
+    } else {
+      msg.style.color = "var(--accent)"; msg.textContent = "No encontramos ese RNC. Escribe la Razón Social a mano.";
+    }
+  } catch (e) {
+    msg.style.color = "var(--accent)"; msg.textContent = "No se pudo consultar ahora. Escribe la Razón Social a mano.";
+  }
+}
+
+const burger = $("#burger"), drawer = $("#drawer");
+function cerrarMenu() { drawer.hidden = true; burger.setAttribute("aria-expanded", "false"); }
+burger.addEventListener("click", () => { const open = drawer.hidden; drawer.hidden = !open; burger.setAttribute("aria-expanded", String(open)); });
+
+/* ---------- Tema claro/oscuro ---------- */
+function aplicarTema(t) {
+  document.documentElement.setAttribute("data-theme", t);
+  try { localStorage.setItem("bp_tema", t); } catch (e) {}
+  const btn = $("#themeToggle");
+  if (btn) {
+    btn.textContent = t === "dark" ? "☀️" : "🌙";
+    btn.setAttribute("aria-label", t === "dark" ? "Cambiar a tema claro" : "Cambiar a tema oscuro");
+  }
+}
+function temaInicial() {
+  try {
+    const guardado = localStorage.getItem("bp_tema");
+    if (guardado === "dark" || guardado === "light") return guardado;
+  } catch (e) {}
+  return (window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light";
+}
+aplicarTema(temaInicial());
+$("#themeToggle").addEventListener("click", () => {
+  aplicarTema(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark");
+});
+
+/* ---------- Inicio ---------- */
+$$(".maxmb").forEach(x => x.textContent = CONFIG.MAX_MB_ARCHIVO);
+$$(".dias").forEach(x => x.textContent = CONFIG.DIAS_PRODUCCION);
+$("#faqEnvioGratis").textContent = fmt(CONFIG.ENVIO_GRATIS_DESDE);
+$("#printFecha").textContent = new Date().toLocaleDateString("es-DO", { day: "numeric", month: "long", year: "numeric" });
+const chipDefaultTxt = Object.entries(CONFIG.PRODUCTOS).map(([k, p]) => `${p.nombre.split(" ")[0]} desde ${minCant(k)}`).join(" · ");
+const HERO_INFO = {
+  stickers:  `Stickers troquelados · desde ${minCant("stickers")} unds · cortados a la silueta de tu diseño`,
+  hojas:     `Hojas de stickers · desde ${minCant("hojas")} unds · varios diseños en una misma lámina`,
+  etiquetas: `Etiquetas · desde ${minCant("etiquetas")} unds · círculos y rectángulos para tus productos`,
+};
+// El chip, en reposo, muestra la info del botón seleccionado (no el combinado de los 3)
+// — así no "vuelve" siempre a mostrar todo encabezado por Stickers.
+function chipDelSeleccionado() {
+  const sel = document.querySelector(".ctas .cta.sel");
+  return (sel && HERO_INFO[sel.dataset.producto]) || chipDefaultTxt;
+}
+$("#chipMinimos").textContent = chipDelSeleccionado();
+$$(".ctas .cta[data-producto]").forEach(a => {
+  const mostrar = () => { $("#chipMinimos").textContent = HERO_INFO[a.dataset.producto] || chipDefaultTxt; };
+  const ocultar = () => { $("#chipMinimos").textContent = chipDelSeleccionado(); };
+  a.addEventListener("mouseenter", mostrar);
+  a.addEventListener("focus", mostrar);
+  a.addEventListener("mouseleave", ocultar);
+  a.addEventListener("blur", ocultar);
+});
+const desde = k => { const p = CONFIG.PRODUCTOS[k], t = p.tamanos[0], q = p.cantidades[p.cantidades.length - 1]; return fmt2(precioUnitario(t.w, t.h, q, k)) + " c/u"; };
+$("#fromStk").textContent = desde("stickers");
+$("#fromEtq").textContent = desde("etiquetas");
+$("#fromHojas").textContent = desde("hojas");
+$("#muestrasPrecio").textContent = fmt(CONFIG.MUESTRAS.precio);
+const waGen = waLink("Hola Buenos Prints, tengo una pregunta sobre stickers.");
+$("#waFloat").href = waGen; $("#footWa").href = waGen; $("#footIg").href = CONFIG.INSTAGRAM; $("#igBtn").href = CONFIG.INSTAGRAM;
+$("#fecha").min = new Date().toISOString().slice(0, 10);
+renderCollage(); renderEntrega(); renderDrop();
+setProducto(location.hash === "#etiquetas" ? "etiquetas" : location.hash === "#hojas" ? "hojas" : "stickers");
+renderCarrito();
+
+/* ---------- Indicador de progreso (paso X de 6) ---------- */
+(function initStepsProgress() {
+  const bars = $$(".stepsprog-bars span");
+  const label = $("#stepsProgLabel");
+  const steps = $$(".steps > .step");
+  if (!bars.length || !steps.length || !("IntersectionObserver" in window)) return;
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => { e.target.dataset.visible = e.isIntersecting ? "1" : "0"; });
+    let idx = 0;
+    steps.forEach((s, i) => { if (s.dataset.visible === "1") idx = i; });
+    bars.forEach((b, i) => b.classList.toggle("on", i <= idx));
+    label.textContent = `Paso ${idx + 1} de ${steps.length}`;
+  }, { rootMargin: "-130px 0px -65% 0px", threshold: 0 });
+  steps.forEach(s => obs.observe(s));
+})();
+</script>
+
+</body></html>
