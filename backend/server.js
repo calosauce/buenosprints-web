@@ -23,7 +23,7 @@ app.post("/api/pedidos", async (req, res) => {
       return res.status(400).json({ error: "Faltan datos del pedido (detalle, subtotal, total)." });
     }
 
-    const pedido = crearPedido({ cliente: cliente || {}, detalle, subtotal, total });
+    const pedido = await crearPedido({ cliente: cliente || {}, detalle, subtotal, total });
     const pdfBuffer = await generarPDFPedido(pedido, { esFactura: false });
 
     // El correo al taller es automático y no depende de nada más.
@@ -56,7 +56,7 @@ app.post("/api/pedidos", async (req, res) => {
 
 // Sirve el PDF de un pedido ya creado (para el link que se manda por WhatsApp/correo).
 app.get("/api/pedidos/:numero/pdf", async (req, res) => {
-  const pedido = obtenerPedido(req.params.numero);
+  const pedido = await obtenerPedido(req.params.numero);
   if (!pedido) return res.status(404).send("Pedido no encontrado");
   const esFactura = pedido.estado === "pagado";
   const pdfBuffer = await generarPDFPedido(pedido, { esFactura });
@@ -66,8 +66,8 @@ app.get("/api/pedidos/:numero/pdf", async (req, res) => {
 
 // Marca un pedido como pagado (de momento, a mano desde el taller — ver README
 // sobre cómo conectar esto a una pasarela de pago más adelante si se quiere).
-app.post("/api/pedidos/:numero/pagar", (req, res) => {
-  const pedido = marcarPagado(req.params.numero);
+app.post("/api/pedidos/:numero/pagar", async (req, res) => {
+  const pedido = await marcarPagado(req.params.numero);
   if (!pedido) return res.status(404).json({ error: "Pedido no encontrado" });
   res.json({ ok: true, pedido });
 });

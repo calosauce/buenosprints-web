@@ -1,70 +1,109 @@
 // Persistencia de pedidos + numeración interna secuencial.
-// Usa SQLite local en el servidor (archivo en disco). No requiere credenciales
-// externas y sobrevive reinicios de la app. Cuando el negocio crezca y se quiera
-// mover a MySQL (ya disponible en el hosting), solo hay que reemplazar este
-// archivo — el resto del backend solo llama a las funciones de aquí.
+// Usa el MySQL incluido en el plan de hosting (no un archivo SQLite local):
+// Hostinger reconstruye la carpeta de la app en cada despliegue de Git, así
+// que cualquier dato guardado en disco ahí (como un .db de SQLite) se pierde
+// con el siguiente "git push" — incluyendo la numeración interna de pedidos.
+// MySQL vive fuera de esa carpeta y sobrevive a los despliegues.
+//
+// Las credenciales (DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD) las puso
+// Hostinger automáticamente como variables de entorno al crear la base
+// (`hosting_databases_setup-website`) — nunca se escriben aquí ni se ven en
+// texto plano en ningún lado.
 
-const path = require("path");
-const Database = require("better-sqlite3");
+const mysql = require("mysql2/promise");
 
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, "..", "data", "pedidos.db");
-require("fs").mkdirSync(path.dirname(DB_PATH), { recursive: true });
+// Hostinger entrega DB_HOST="localhost", pero en Node.js eso puede resolver a
+// ::1 (IPv6) y el usuario de la base no siempre tiene permiso desde ahí.
+// Forzamos 127.0.0.1 salvo que se indique explícitamente otro host (ej. para
+// desarrollo local apuntando a otro servidor).
+const DB_HOST = process.env.DB_HOST && process.env.DB_HOST !== "localhost"
+  ? process.env.DB_HOST
+  : "127.0.0.1";
 
-const db = new Database(DB_PATH);
-db.pragma("journal_mode = WAL");
+const pool = mysql.createPool({
+  host: DB_HOST,
+  port: Number(process.env.DB_PORT || 3306),
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  waitForConnections: true,
+  connectionLimit: 5,
+});
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS pedidos (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    numero TEXT UNIQUE NOT NULL,          -- numeración interna, ej. BP-2026-000123
-    estado TEXT NOT NULL DEFAULT 'pendiente_pago', -- pendiente_pago | pagado | cancelado
-    cliente_nombre TEXT,
-    cliente_telefono TEXT,
-    cliente_email TEXT,
-    detalle_json TEXT NOT NULL,           -- snapshot completo del carrito/orden
-    subtotal INTEGER NOT NULL,            -- en centavos de RD$
-    total INTEGER NOT NULL,
-    ecf_numero TEXT,                      -- se llena solo cuando DGII apruebe el negocio
-    creado_en TEXT NOT NULL DEFAULT (datetime('now')),
-    pagado_en TEXT
-  );
+let listoPromesa = null;
+async function asegurarTablas() {
+  if (!listoPromesa) {
+    listoPromesa = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS pedidos (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          numero VARCHAR(32) UNIQUE NOT NULL,
+          estado VARCHAR(20) NOT NULL DEFAULT 'pendiente_pago',
+          cliente_nombre VARCHAR(255),
+          cliente_telefono VARCHAR(50),
+          cliente_email VARCHAR(255),
+          detalle_json LONGTEXT NOT NULL,
+          subtotal INT NOT NULL,
+          total INT NOT NULL,
+          ecf_numero VARCHAR(64),
+          creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          pagado_en DATETIME NULL
+        ) ENGINE=InnoDB;
+      `);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS contadores (
+          clave VARCHAR(32) PRIMARY KEY,
+          valor INT NOT NULL
+        ) ENGINE=InnoDB;
+      `);
+    })();
+  }
+  return listoPromesa;
+}
 
-  CREATE TABLE IF NOT EXISTS contadores (
-    clave TEXT PRIMARY KEY,
-    valor INTEGER NOT NULL
-  );
-`);
-
-function siguienteNumero() {
+// Incrementa el contador del año en una transacción con bloqueo de fila
+// (SELECT ... FOR UPDATE), para que dos pedidos simultáneos nunca reciban el
+// mismo número.
+async function siguienteNumero(conn) {
   const year = new Date().getFullYear();
   const clave = `pedido-${year}`;
-  const tx = db.transaction(() => {
-    const row = db.prepare("SELECT valor FROM contadores WHERE clave = ?").get(clave);
-    const siguiente = (row ? row.valor : 0) + 1;
-    db.prepare(
-      "INSERT INTO contadores (clave, valor) VALUES (?, ?) ON CONFLICT(clave) DO UPDATE SET valor = ?"
-    ).run(clave, siguiente, siguiente);
-    return siguiente;
-  });
-  const n = tx();
-  return `BP-${year}-${String(n).padStart(6, "0")}`;
+  await conn.query("INSERT IGNORE INTO contadores (clave, valor) VALUES (?, 0)", [clave]);
+  const [rows] = await conn.query("SELECT valor FROM contadores WHERE clave = ? FOR UPDATE", [clave]);
+  const siguiente = (rows[0]?.valor || 0) + 1;
+  await conn.query("UPDATE contadores SET valor = ? WHERE clave = ?", [siguiente, clave]);
+  return `BP-${year}-${String(siguiente).padStart(6, "0")}`;
 }
 
-function crearPedido({ cliente, detalle, subtotal, total }) {
-  const numero = siguienteNumero();
-  db.prepare(
-    `INSERT INTO pedidos (numero, cliente_nombre, cliente_telefono, cliente_email, detalle_json, subtotal, total)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`
-  ).run(numero, cliente.nombre || null, cliente.telefono || null, cliente.email || null, JSON.stringify(detalle), subtotal, total);
-  return obtenerPedido(numero);
+async function crearPedido({ cliente, detalle, subtotal, total }) {
+  await asegurarTablas();
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const numero = await siguienteNumero(conn);
+    await conn.query(
+      `INSERT INTO pedidos (numero, cliente_nombre, cliente_telefono, cliente_email, detalle_json, subtotal, total)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [numero, cliente.nombre || null, cliente.telefono || null, cliente.email || null, JSON.stringify(detalle), subtotal, total]
+    );
+    await conn.commit();
+    return obtenerPedido(numero);
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
 }
 
-function obtenerPedido(numero) {
-  return db.prepare("SELECT * FROM pedidos WHERE numero = ?").get(numero);
+async function obtenerPedido(numero) {
+  await asegurarTablas();
+  const [rows] = await pool.query("SELECT * FROM pedidos WHERE numero = ?", [numero]);
+  return rows[0] || null;
 }
 
-function marcarPagado(numero) {
-  db.prepare("UPDATE pedidos SET estado = 'pagado', pagado_en = datetime('now') WHERE numero = ?").run(numero);
+async function marcarPagado(numero) {
+  await asegurarTablas();
+  await pool.query("UPDATE pedidos SET estado = 'pagado', pagado_en = NOW() WHERE numero = ?", [numero]);
   return obtenerPedido(numero);
 }
 
