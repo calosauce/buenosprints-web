@@ -185,12 +185,6 @@ app.get("/api/rastreo/:numero", async (req, res) => {
   }
 });
 
-app.get("/api/health", (req, res) => {
-  // TEMPORAL: diagnóstico de la IP que ve el limitador del rastreo.
-  res.set("X-Diag-Ip", String(req.ip || ""));
-  res.set("X-Diag-Xff", String(req.get("x-forwarded-for") || ""));
-  res.set("Access-Control-Expose-Headers", "X-Diag-Ip, X-Diag-Xff");
-  res.json({ ok: true });
-});
+app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
 app.listen(PORT, () => console.log(`Buenos Prints backend escuchando en :${PORT}`));
