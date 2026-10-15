@@ -167,17 +167,4 @@ async function marcarPagado(numero) {
   return actualizarEstado(numero, "pagado_produccion");
 }
 
-// TEMPORAL — usada por el endpoint de limpieza de un solo uso en server.js
-// para borrar uno o más pedidos de prueba y regresar el contador del año al
-// valor anterior (para que el próximo pedido real recupere ese número). Se
-// quita junto con ese endpoint.
-async function limpiarPedidosDePrueba(numeros, valorContadorPrevio) {
-  await asegurarTablas();
-  const year = new Date().getFullYear();
-  const clave = `pedido-${year}`;
-  const [resultadoBorrado] = await pool.query("DELETE FROM pedidos WHERE numero IN (?)", [numeros]);
-  await pool.query("UPDATE contadores SET valor = ? WHERE clave = ?", [valorContadorPrevio, clave]);
-  return { filasBorradas: resultadoBorrado.affectedRows, contadorReseteadoA: valorContadorPrevio };
-}
-
-module.exports = { crearPedido, obtenerPedido, marcarPagado, actualizarEstado, ESTADOS, ESTADOS_PAGADOS, limpiarPedidosDePrueba };
+module.exports = { crearPedido, obtenerPedido, marcarPagado, actualizarEstado, ESTADOS, ESTADOS_PAGADOS };

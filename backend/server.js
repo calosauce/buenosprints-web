@@ -2,7 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 
-const { crearPedido, obtenerPedido, marcarPagado, actualizarEstado, ESTADOS, limpiarPedidosDePrueba } = require("./lib/db");
+const { crearPedido, obtenerPedido, marcarPagado, actualizarEstado, ESTADOS } = require("./lib/db");
 const { generarPDFPedido } = require("./lib/pdf");
 const { enviarCotizacionAlTaller, enviarActualizacionAlCliente } = require("./lib/email");
 const { linkWhatsApp } = require("./lib/whatsapp");
@@ -132,13 +132,6 @@ app.post("/api/pedidos/:numero/estado", async (req, res) => {
     console.error(err);
     res.status(500).json({ error: "Error interno al actualizar el estado." });
   }
-});
-
-// TEMPORAL — limpieza de un solo uso: borra los pedidos de prueba de la
-// conexión carrito↔backend y regresa el contador al número anterior.
-app.post("/api/admin/limpiar-prueba-7c2f481d9e63a0b", async (req, res) => {
-  const resultado = await limpiarPedidosDePrueba(["BP-2026-000717", "BP-2026-000718"], 716);
-  res.json({ ok: true, resultado });
 });
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
