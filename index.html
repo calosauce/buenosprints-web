@@ -71,6 +71,24 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;backgroun
 .themebtn:hover{transform:translate(-1px,-1px);box-shadow:3px 3px 0 var(--ink)}
 .themebtn:active{transform:translate(1px,1px);box-shadow:1px 1px 0 var(--ink)}
 @media(max-width:420px){.top .wrap{gap:10px;height:60px}.logo img{height:44px}.top .right{gap:6px}.cartbtn{padding:7px 10px}.themebtn{width:36px;height:36px;font-size:15px}}
+/* Menú pequeño bajo "Mi pedido" (solo escritorio; en móvil el menú
+   hamburguesa ya trae "Rastrear pedido"). Se abre al pasar el mouse o al
+   llegar con el teclado (Tab). */
+.cartwrap{position:relative}
+.cartbtn .caret{display:none}
+.cartmenu{display:none}
+@media(min-width:960px){
+  .cartbtn .caret{display:inline-block;width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid currentColor;margin-left:-2px;transition:transform .15s}
+  .cartmenu{position:absolute;right:0;top:100%;padding-top:10px;z-index:40;min-width:230px}
+  .cartwrap:hover .cartmenu,.cartwrap:focus-within .cartmenu{display:block}
+  .cartwrap:hover .caret,.cartwrap:focus-within .caret{transform:rotate(180deg)}
+  .cartmenu a{display:block;background:var(--paper);color:var(--ink);text-decoration:none;font-weight:700;font-size:15px;padding:10px 14px;border:2px solid var(--ink);border-top-width:0}
+  .cartmenu a:first-child{border-top-width:2px;border-radius:14px 14px 0 0}
+  .cartmenu a:last-child{border-radius:0 0 14px 14px;box-shadow:3px 3px 0 var(--ink)}
+  .cartmenu a small{display:block;font-weight:400;font-size:13px;color:var(--muted)}
+  .cartmenu a:hover,.cartmenu a:focus-visible{background:var(--sun);color:#17140F}
+  .cartmenu a:hover small,.cartmenu a:focus-visible small{color:#17140F}
+}
 .cartbtn .count{background:var(--ink);color:var(--paper);border-radius:999px;min-width:22px;height:22px;display:inline-grid;place-items:center;font-size:12px;padding:0 6px}
 .burger{border:2px solid var(--ink);background:var(--paper);border-radius:12px;width:42px;height:42px;display:grid;place-items:center;cursor:pointer}
 .burger span,.burger span::before,.burger span::after{display:block;width:18px;height:2px;background:var(--ink);position:relative;content:""}
@@ -401,7 +419,13 @@ dialog::backdrop{background:rgba(23,20,15,.55)}
     </nav>
     <div class="right">
       <button class="themebtn" type="button" id="themeToggle" aria-label="Cambiar a tema oscuro" title="Cambiar tema">🌙</button>
-      <a class="btn sm ghost cartbtn" href="#checkout">Mi pedido <span class="count" id="cartCount">0</span></a>
+      <div class="cartwrap">
+        <a class="btn sm ghost cartbtn" href="#checkout">Mi pedido <span class="count" id="cartCount">0</span><span class="caret" aria-hidden="true"></span></a>
+        <div class="cartmenu" aria-label="Opciones de pedido">
+          <a href="#checkout">Ver mi pedido <small>Revisa y envía tu carrito</small></a>
+          <a href="/rastreo">Rastrear mi pedido <small>Consulta en qué paso va</small></a>
+        </div>
+      </div>
       <a class="btn sm ghost show-lg" href="#stickers" data-producto="stickers">Crear stickers</a>
       <button class="burger" type="button" id="burger" aria-expanded="false" aria-controls="drawer" aria-label="Abrir menú"><span></span></button>
     </div>
@@ -1582,6 +1606,10 @@ document.addEventListener("click", e => {
     return;
   }
   if (e.target.closest(".drawer a")) cerrarMenu();
+  // Tras hacer clic en "Mi pedido" o en su menú, se suelta el foco para que
+  // el menú pequeño se cierre en vez de quedarse abierto por :focus-within.
+  const enCarrito = e.target.closest(".cartwrap a");
+  if (enCarrito) setTimeout(() => enCarrito.blur(), 0);
 });
 
 function syncCustomInputs() {
