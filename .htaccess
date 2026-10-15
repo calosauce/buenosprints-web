@@ -1,0 +1,18 @@
+# Este repositorio sirve el front-end estático (index.html, trabajos/, logos/)
+# directo desde la raíz del dominio buenosprints.com vía auto-deploy de Git.
+# También vive aquí la carpeta backend/ (el código de la API, que corre por
+# separado en api.buenosprints.com) y el historial .git — ninguno de los dos
+# debe quedar accesible por HTTP una vez desplegado en buenosprints.com.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^backend/ - [F,L]
+  RewriteRule (^|/)\.git(/|$) - [F,L]
+</IfModule>
+
+# Respaldo por si mod_rewrite no está activo: igual bloquea con 403.
+<IfModule !mod_rewrite.c>
+  RedirectMatch 403 ^/backend/
+  RedirectMatch 403 ^/\.git/
+</IfModule>
+
+Options -Indexes
