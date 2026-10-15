@@ -61,67 +61,27 @@ async function enviarCotizacionAlTaller(pedido, pdfBuffer, linkWhatsApp, archivo
   });
 }
 
-// Mensajes amigables por estado para el correo que recibe el CLIENTE cuando
-// alguien en el taller cambia el dropdown "Estado" en Google Sheets.
-// "cotizado" no dispara correo (es el estado inicial, el cliente ya recibió
-// la cotización por correo/WhatsApp al hacer el pedido).
-const MENSAJES_ESTADO = {
-  pagado_produccion: {
-    asunto: (p) => `Pedido ${p.numero} — ¡Pago confirmado, en producción!`,
-    cuerpo: (p) => `Hola${p.cliente_nombre ? " " + p.cliente_nombre : ""},\n\nConfirmamos el pago de tu pedido ${p.numero} y ya está en producción en el taller.\n\nTe avisaremos por aquí en cuanto esté listo para entrega.\n\n¡Gracias por tu compra!`,
-  },
-  listo_entrega: {
-    asunto: (p) => `Pedido ${p.numero} — ¡Listo para entrega!`,
-    cuerpo: (p) => `Hola${p.cliente_nombre ? " " + p.cliente_nombre : ""},\n\n¡Tu pedido ${p.numero} ya está listo! Puedes coordinar la entrega o retiro con nosotros por WhatsApp (849-577-9893).\n\n¡Gracias por tu compra!`,
-  },
-  entregado: {
-    asunto: (p) => `Pedido ${p.numero} — Entregado`,
-    cuerpo: (p) => `Hola${p.cliente_nombre ? " " + p.cliente_nombre : ""},\n\nConfirmamos que tu pedido ${p.numero} fue entregado. ¡Esperamos que te encante!\n\nSi tienes cualquier duda o quieres hacer otro pedido, aquí estamos.\n\n¡Gracias por preferirnos!`,
-  },
-  cancelado: {
-    asunto: (p) => `Pedido ${p.numero} — Cancelado`,
-    cuerpo: (p) => `Hola${p.cliente_nombre ? " " + p.cliente_nombre : ""},\n\nTu pedido ${p.numero} fue cancelado. Si crees que esto es un error o quieres volver a hacer el pedido, escríbenos por WhatsApp (849-577-9893).\n\nGracias por tu comprensión.`,
-  },
-};
-
-// Envía al CLIENTE (no al taller) un correo con el nuevo estado de su pedido.
-// No hace nada si el estado no tiene mensaje definido (ej. "cotizado") o si
-// el pedido no tiene correo de contacto.
-async function enviarActualizacionAlCliente(pedido, estado) {
-  const plantilla = MENSAJES_ESTADO[estado];
-  if (!plantilla || !pedido.cliente_email) return { ok: false, motivo: "sin plantilla o sin correo" };
-
-  const transportador = crearTransportador();
-  await transportador.sendMail({
-    from: process.env.SMTP_USER,
-    to: pedido.cliente_email,
-    replyTo: process.env.TALLER_EMAIL || process.env.SMTP_USER,
-    subject: plantilla.asunto(pedido),
-    text: plantilla.cuerpo(pedido) + `\n\nSigue tu pedido en cualquier momento: ${urlRastreo(pedido)}`,
-  });
-  return { ok: true };
-}
-
 // ---------------------------------------------------------------------------
-// Correo de CONFIRMACIÓN al cliente (se envía apenas se crea el pedido).
-// Así el cliente tiene su número de pedido y su cotización en el correo
-// aunque cierre la pestaña antes de anotarlos. Independiente del WhatsApp
-// con los datos de pago que el taller manda después.
-// Estilo calcado del sitio: fondo crema, bordes negros gruesos, rojo
-// #FF4D2E, número de pedido en "pastilla" amarilla, y los mismos pasos
-// numerados de la página de rastreo. Todo con tablas y estilos en línea
-// porque es lo único que respetan Gmail/Outlook.
+// Correos al CLIENTE: confirmación (al crear el pedido) y actualizaciones
+// de estado (cuando el taller cambia el dropdown "Estado" del Sheet).
+// Todos usan la misma plantilla, calcada del sitio: header rojo con el logo,
+// tarjeta blanca con borde negro grueso, número de pedido en pastilla
+// amarilla, los mismos pasos numerados de la página de rastreo, y el resumen
+// del pedido. Todo con tablas y estilos en línea porque es lo único que
+// respetan Gmail/Outlook. El logo es un PNG (email/logo.png en la raíz del
+// sitio) porque Gmail/Outlook no muestran SVG.
 // ---------------------------------------------------------------------------
 
 const { PASOS, urlRastreo } = require("./rastreo");
 
 const C = {
   bg: "#FFF8EC", paper: "#FFFFFF", ink: "#17140F", muted: "#6B6358", line: "#E8DFD0",
-  accent: "#FF4D2E", sun: "#FFC93C", mint: "#2BB673",
+  accent: "#FF4D2E", sun: "#FFC93C", mint: "#2BB673", badBg: "#FFE1D9",
 };
 const FUENTE = "'DM Sans',-apple-system,'Segoe UI',Helvetica,Arial,sans-serif";
 const FUENTE_TITULO = "'Bricolage Grotesque','DM Sans',-apple-system,'Segoe UI',Helvetica,Arial,sans-serif";
 const WHATSAPP_TALLER = "18495779893";
+const URL_LOGO = `${process.env.SITIO_URL || "https://buenosprints.com"}/email/logo.png`;
 
 function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -131,20 +91,37 @@ function rd(centavos) {
   return `RD$${((centavos || 0) / 100).toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-// Barra + círculos numerados (✓ en los completados), igual que el rastreo.
+function primerNombre(pedido) {
+  return (pedido.cliente_nombre || "").trim().split(/\s+/)[0] || "";
+}
+
+function leerDetalle(pedido) {
+  try { return JSON.parse(pedido.detalle_json || "{}"); } catch (_) { return {}; }
+}
+
+function linkWhatsAppTaller(pedido) {
+  return `https://wa.me/${WHATSAPP_TALLER}?text=${encodeURIComponent(`¡Hola! Tengo una pregunta sobre mi pedido ${pedido.numero}.`)}`;
+}
+
+// Barra + círculos numerados, igual que el rastreo: ✓ negro en los pasos
+// hechos, rojo en el actual y, cuando el pedido ya se entregó (último paso),
+// todo completo con el último en verde.
 function pasosHTML(indiceActual) {
+  const ultimo = PASOS.length - 1;
   const barras = PASOS.map((_, i) =>
     `<td style="padding:0 3px"><div style="height:5px;border-radius:999px;background:${i <= indiceActual ? C.ink : C.line};font-size:0;line-height:0">&nbsp;</div></td>`
   ).join("");
   const celdas = PASOS.map((p, i) => {
+    const final = i === indiceActual && i === ultimo;
     const hecho = i < indiceActual;
-    const actual = i === indiceActual;
-    const fondo = hecho ? C.ink : actual ? C.accent : C.paper;
-    const color = hecho || actual ? "#FFFFFF" : C.muted;
-    const borde = hecho || actual ? C.ink : C.line;
+    const actual = i === indiceActual && !final;
+    const fondo = final ? C.mint : hecho ? C.ink : actual ? C.accent : C.paper;
+    const activo = hecho || actual || final;
+    const color = activo ? "#FFFFFF" : C.muted;
+    const borde = activo ? C.ink : C.line;
     return `<td width="25%" align="center" valign="top" style="padding:12px 4px 0">
-      <div style="width:30px;height:30px;line-height:30px;border-radius:50%;background:${fondo};color:${color};border:2px solid ${borde};font:700 14px ${FUENTE};text-align:center;margin:0 auto">${hecho ? "✓" : i + 1}</div>
-      <div style="font:${actual ? 700 : 500} 12px/1.3 ${FUENTE};color:${actual ? C.ink : C.muted};margin-top:6px">${esc(p.titulo)}</div>
+      <div style="width:30px;height:30px;line-height:30px;border-radius:50%;background:${fondo};color:${color};border:2px solid ${borde};font:700 14px ${FUENTE};text-align:center;margin:0 auto">${hecho || final ? "✓" : i + 1}</div>
+      <div style="font:${actual || final ? 700 : 500} 12px/1.3 ${FUENTE};color:${actual || final ? C.ink : C.muted};margin-top:6px">${esc(p.titulo)}</div>
     </td>`;
   }).join("");
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr>${barras}</tr></table>
@@ -155,9 +132,9 @@ function boton(href, texto, { fondo = C.accent, color = "#FFFFFF" } = {}) {
   return `<a href="${esc(href)}" style="display:inline-block;background:${fondo};color:${color};border:2px solid ${C.ink};border-radius:999px;padding:12px 22px;font:700 15px ${FUENTE};text-decoration:none;box-shadow:3px 3px 0 ${C.ink};margin:0 8px 10px 0">${texto}</a>`;
 }
 
-function resumenItemsHTML(detalle) {
+function resumenHTML(pedido, detalle) {
   const items = Array.isArray(detalle.items) ? detalle.items : [];
-  return items.map((it) => {
+  const filasItems = items.map((it) => {
     const medida = it.w && it.h ? ` · ${it.w}" × ${it.h}"` : "";
     const extra = [it.material, it.forma].filter(Boolean).join(" · ");
     return `<tr>
@@ -168,15 +145,8 @@ function resumenItemsHTML(detalle) {
       <td align="right" valign="top" style="padding:10px 0;border-top:1px dashed ${C.line};font:700 15px ${FUENTE};color:${C.ink};white-space:nowrap">${rd(it.precioTotal)}</td>
     </tr>`;
   }).join("");
-}
 
-function htmlConfirmacion(pedido, linkRastreo) {
-  let detalle = {};
-  try { detalle = JSON.parse(pedido.detalle_json || "{}"); } catch (_) {}
-  const nombre = (pedido.cliente_nombre || "").trim().split(/\s+/)[0];
-  const linkWa = `https://wa.me/${WHATSAPP_TALLER}?text=${encodeURIComponent(`¡Hola! Tengo una pregunta sobre mi pedido ${pedido.numero}.`)}`;
   const rush = detalle.rush && typeof detalle.rush === "object" ? detalle.rush.costo : detalle.rush;
-
   const filasExtra = [
     detalle.descuento ? ["Descuento", `-${rd(detalle.descuento)}`] : null,
     rush ? ["Servicio RUSH (24h)", rd(rush)] : null,
@@ -185,45 +155,48 @@ function htmlConfirmacion(pedido, linkRastreo) {
     `<tr><td style="padding:4px 0;font:14px ${FUENTE};color:${C.muted}">${esc(k)}</td><td align="right" style="padding:4px 0;font:14px ${FUENTE};color:${C.ink}">${esc(v)}</td></tr>`
   ).join("");
 
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:18px;border-collapse:collapse">
+      <tr><td colspan="2" style="padding:0 0 4px;font:700 13px ${FUENTE};letter-spacing:.08em;text-transform:uppercase;color:${C.muted}">Tu pedido</td></tr>
+      ${filasItems}
+    </table>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border-top:2px solid ${C.ink};margin-top:6px">
+      ${filasExtra}
+      <tr><td style="padding:8px 0 0;font:800 18px ${FUENTE_TITULO};color:${C.ink}">Total</td><td align="right" style="padding:8px 0 0;font:800 18px ${FUENTE_TITULO};color:${C.ink}">${rd(pedido.total)}</td></tr>
+    </table>`;
+}
+
+// Plantilla común. `pasoActual` = índice 0-3, o null para no mostrar pasos
+// (cancelado). `aviso` = recuadro rojo opcional (cancelado).
+function plantillaHTML(pedido, { preheader, titulo, intro, pasoActual, aviso, cuerpo, nota }) {
+  const linkRastreo = urlRastreo(pedido);
+  const detalle = leerDetalle(pedido);
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light"><title>Pedido ${esc(pedido.numero)}</title></head>
 <body style="margin:0;padding:0;background:${C.bg}">
-<div style="display:none;max-height:0;overflow:hidden">Tu número de pedido es ${esc(pedido.numero)}. Te escribiremos por WhatsApp con los datos de pago.</div>
+<div style="display:none;max-height:0;overflow:hidden">${esc(preheader)}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.bg}"><tr><td align="center" style="padding:24px 12px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px">
 
-  <tr><td style="background:${C.accent};border:2px solid ${C.ink};border-radius:22px 22px 0 0;padding:18px 24px">
-    <span style="font:800 24px ${FUENTE_TITULO};color:#FFFFFF;letter-spacing:-.02em">Buenos Prints</span>
+  <tr><td style="background:${C.accent};border:2px solid ${C.ink};border-radius:22px 22px 0 0;padding:16px 22px">
+    <a href="https://buenosprints.com" style="text-decoration:none"><img src="${URL_LOGO}" width="200" height="50" alt="Buenos Prints" style="display:block;border:0;width:200px;height:auto;max-width:100%;font:800 24px ${FUENTE_TITULO};color:#FFFFFF"></a>
   </td></tr>
 
   <tr><td style="background:${C.paper};border:2px solid ${C.ink};border-top:0;border-radius:0 0 22px 22px;padding:26px 24px">
-    <h1 style="margin:0 0 6px;font:800 30px/1.05 ${FUENTE_TITULO};color:${C.ink};letter-spacing:-.02em">¡Pedido recibido${nombre ? ", " + esc(nombre) : ""}!</h1>
-    <p style="margin:0 0 6px;font:16px/1.5 ${FUENTE};color:${C.ink}">Tu número de pedido es</p>
+    <h1 style="margin:0 0 6px;font:800 30px/1.05 ${FUENTE_TITULO};color:${C.ink};letter-spacing:-.02em">${titulo}</h1>
+    <p style="margin:0 0 6px;font:16px/1.5 ${FUENTE};color:${C.ink}">${intro}</p>
     <div style="display:inline-block;background:${C.sun};border:2px solid ${C.ink};border-radius:999px;padding:4px 16px;font:800 20px ${FUENTE};color:${C.ink};margin:0 0 22px">${esc(pedido.numero)}</div>
 
-    ${pasosHTML(0)}
+    ${aviso ? `<div style="background:${C.badBg};border:2px solid ${C.ink};border-radius:14px;padding:12px 16px;margin:0 0 18px;font:15px/1.5 ${FUENTE};color:${C.ink}">${aviso}</div>` : ""}
+    ${pasoActual === null || pasoActual === undefined ? "" : pasosHTML(pasoActual)}
 
-    <h2 style="margin:26px 0 8px;font:800 20px ${FUENTE_TITULO};color:${C.ink}">¿Qué sigue?</h2>
-    <ol style="margin:0 0 20px;padding-left:20px;font:15px/1.55 ${FUENTE};color:${C.ink}">
-      <li>Te escribimos por WhatsApp con los datos para completar el pago (transferencia o enlace con tarjeta).</li>
-      <li>Con el pago confirmado, te enviamos la prueba digital en 24 horas o menos.</li>
-      <li>Apruebas la prueba (ajustamos juntos cualquier detalle menor).</li>
-      <li>Producimos en 2 a 3 días laborables y entregamos.</li>
-    </ol>
+    ${cuerpo}
 
     ${boton(linkRastreo, "Ver estado de mi pedido")}
-    ${boton(linkWa, "Escribirnos por WhatsApp", { fondo: C.paper, color: C.ink })}
+    ${boton(linkWhatsAppTaller(pedido), "Escribirnos por WhatsApp", { fondo: C.paper, color: C.ink })}
 
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:18px;border-collapse:collapse">
-      <tr><td colspan="2" style="padding:0 0 4px;font:700 13px ${FUENTE};letter-spacing:.08em;text-transform:uppercase;color:${C.muted}">Tu pedido</td></tr>
-      ${resumenItemsHTML(detalle)}
-    </table>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border-top:2px solid ${C.ink};margin-top:6px;padding-top:6px">
-      ${filasExtra}
-      <tr><td style="padding:8px 0 0;font:800 18px ${FUENTE_TITULO};color:${C.ink}">Total</td><td align="right" style="padding:8px 0 0;font:800 18px ${FUENTE_TITULO};color:${C.ink}">${rd(pedido.total)}</td></tr>
-    </table>
+    ${resumenHTML(pedido, detalle)}
 
-    <p style="margin:20px 0 0;font:13px/1.5 ${FUENTE};color:${C.muted}">Adjuntamos tu cotización en PDF. Para seguir tu pedido en cualquier momento entra a <a href="${esc(linkRastreo)}" style="color:${C.ink}">buenosprints.com/rastreo</a> con tu número de pedido y los últimos 4 dígitos de tu WhatsApp.</p>
+    <p style="margin:20px 0 0;font:13px/1.5 ${FUENTE};color:${C.muted}">${nota || ""}Para seguir tu pedido en cualquier momento entra a <a href="${esc(linkRastreo)}" style="color:${C.ink}">buenosprints.com/rastreo</a> con tu número de pedido y los últimos 4 dígitos de tu WhatsApp.</p>
   </td></tr>
 
   <tr><td align="center" style="padding:18px 8px;font:12px/1.5 ${FUENTE};color:${C.muted}">
@@ -234,43 +207,131 @@ function htmlConfirmacion(pedido, linkRastreo) {
 </body></html>`;
 }
 
-function textoConfirmacion(pedido, linkRastreo) {
-  const nombre = (pedido.cliente_nombre || "").trim().split(/\s+/)[0];
-  return [
-    `¡Pedido recibido${nombre ? ", " + nombre : ""}!`,
-    "",
-    `Tu número de pedido es ${pedido.numero}. Total: ${rd(pedido.total)}.`,
-    "",
-    "¿Qué sigue?",
-    "1. Te escribimos por WhatsApp con los datos para completar el pago (transferencia o enlace con tarjeta).",
-    "2. Con el pago confirmado, te enviamos la prueba digital en 24 horas o menos.",
-    "3. Apruebas la prueba (ajustamos juntos cualquier detalle menor).",
-    "4. Producimos en 2 a 3 días laborables y entregamos.",
-    "",
-    `Sigue tu pedido: ${linkRastreo}`,
-    "",
-    "Adjuntamos tu cotización en PDF. ¿Dudas? Escríbenos por WhatsApp al 849-577-9893.",
-    "",
-    "— Buenos Prints",
-  ].join("\n");
-}
+const h2 = (t) => `<h2 style="margin:26px 0 8px;font:800 20px ${FUENTE_TITULO};color:${C.ink}">${t}</h2>`;
+const parrafo = (t) => `<p style="margin:0 0 20px;font:15px/1.55 ${FUENTE};color:${C.ink}">${t}</p>`;
+const lista = (items) => `<ol style="margin:0 0 20px;padding-left:20px;font:15px/1.55 ${FUENTE};color:${C.ink}">${items.map((t) => `<li>${t}</li>`).join("")}</ol>`;
 
-// No hace nada si el cliente no dejó correo. Lanza error si el SMTP falla
-// (server.js lo atrapa: el pedido se crea igual).
-async function enviarConfirmacionAlCliente(pedido, pdfBuffer) {
-  if (!pedido.cliente_email) return { ok: false, motivo: "sin correo" };
-  const linkRastreo = urlRastreo(pedido);
+// Contenido de cada correo. `html` arma el correo con la plantilla común;
+// `texto` es la versión sin formato (para clientes de correo sin HTML).
+const CORREOS = {
+  confirmacion: {
+    asunto: (p) => `Recibimos tu pedido ${p.numero} — Buenos Prints`,
+    html: (p) => plantillaHTML(p, {
+      preheader: `Tu número de pedido es ${p.numero}. Te escribiremos por WhatsApp con los datos de pago.`,
+      titulo: `¡Pedido recibido${primerNombre(p) ? ", " + esc(primerNombre(p)) : ""}!`,
+      intro: "Tu número de pedido es",
+      pasoActual: 0,
+      cuerpo: h2("¿Qué sigue?") + lista([
+        "Te escribimos por WhatsApp con los datos para completar el pago (transferencia o enlace con tarjeta).",
+        "Con el pago confirmado, te enviamos la prueba digital en 24 horas o menos.",
+        "Apruebas la prueba (ajustamos juntos cualquier detalle menor).",
+        "Producimos en 2 a 3 días laborables y entregamos.",
+      ]),
+      nota: "Adjuntamos tu cotización en PDF. ",
+    }),
+    texto: (p) => [
+      `¡Pedido recibido${primerNombre(p) ? ", " + primerNombre(p) : ""}!`, "",
+      `Tu número de pedido es ${p.numero}. Total: ${rd(p.total)}.`, "",
+      "¿Qué sigue?",
+      "1. Te escribimos por WhatsApp con los datos para completar el pago (transferencia o enlace con tarjeta).",
+      "2. Con el pago confirmado, te enviamos la prueba digital en 24 horas o menos.",
+      "3. Apruebas la prueba (ajustamos juntos cualquier detalle menor).",
+      "4. Producimos en 2 a 3 días laborables y entregamos.", "",
+      "Adjuntamos tu cotización en PDF. ¿Dudas? Escríbenos por WhatsApp al 849-577-9893.",
+    ].join("\n"),
+  },
+
+  pagado_produccion: {
+    asunto: (p) => `Pedido ${p.numero} — ¡Pago confirmado, en producción!`,
+    html: (p) => plantillaHTML(p, {
+      preheader: `Confirmamos tu pago. Tu pedido ${p.numero} ya está en producción.`,
+      titulo: `¡Pago confirmado${primerNombre(p) ? ", " + esc(primerNombre(p)) : ""}!`,
+      intro: "Tu pedido ya está en producción",
+      pasoActual: 1,
+      cuerpo: h2("¿Qué sigue?") + lista([
+        "Te enviamos la prueba digital por WhatsApp en 24 horas o menos.",
+        "Apruebas la prueba (ajustamos juntos cualquier detalle menor).",
+        "Producimos en 2 a 3 días laborables y te avisamos por aquí cuando esté listo.",
+      ]),
+    }),
+    texto: (p) => `Hola${primerNombre(p) ? " " + primerNombre(p) : ""},\n\nConfirmamos el pago de tu pedido ${p.numero} y ya está en producción.\n\nTe enviamos la prueba digital por WhatsApp en 24 horas o menos y te avisamos por aquí cuando esté listo.\n\n¡Gracias por tu compra!`,
+  },
+
+  listo_entrega: {
+    asunto: (p) => `Pedido ${p.numero} — ¡Listo para entrega!`,
+    html: (p) => {
+      const tipo = leerDetalle(p).entrega?.tipo;
+      return plantillaHTML(p, {
+        preheader: `Tu pedido ${p.numero} está listo. Coordinemos la entrega.`,
+        titulo: `¡Tu pedido está listo${primerNombre(p) ? ", " + esc(primerNombre(p)) : ""}!`,
+        intro: "Ya terminamos tu pedido",
+        pasoActual: 2,
+        cuerpo: h2("Coordinemos la entrega") + parrafo(
+          (tipo ? `Elegiste <b>${esc(tipo)}</b>. ` : "") +
+          "Escríbenos por WhatsApp al 849-577-9893 para coordinar el día y la hora de entrega o retiro."
+        ),
+      });
+    },
+    texto: (p) => `Hola${primerNombre(p) ? " " + primerNombre(p) : ""},\n\n¡Tu pedido ${p.numero} ya está listo! Coordina la entrega o retiro con nosotros por WhatsApp (849-577-9893).\n\n¡Gracias por tu compra!`,
+  },
+
+  entregado: {
+    asunto: (p) => `Pedido ${p.numero} — Entregado`,
+    html: (p) => plantillaHTML(p, {
+      preheader: `Tu pedido ${p.numero} fue entregado. ¡Gracias por preferirnos!`,
+      titulo: `¡Pedido entregado${primerNombre(p) ? ", " + esc(primerNombre(p)) : ""}!`,
+      intro: "Esperamos que te encante",
+      pasoActual: 3,
+      cuerpo: h2("¡Gracias por preferirnos!") + parrafo(
+        "Si tienes cualquier duda con tu pedido, o quieres hacer otro, escríbenos por WhatsApp. " +
+        "Y si publicas tus stickers, etiquétanos en Instagram: <a href=\"https://instagram.com/buenos.prints\" style=\"color:" + C.ink + "\">@buenos.prints</a>."
+      ),
+    }),
+    texto: (p) => `Hola${primerNombre(p) ? " " + primerNombre(p) : ""},\n\nConfirmamos que tu pedido ${p.numero} fue entregado. ¡Esperamos que te encante!\n\nSi tienes cualquier duda o quieres hacer otro pedido, aquí estamos.\n\n¡Gracias por preferirnos!`,
+  },
+
+  cancelado: {
+    asunto: (p) => `Pedido ${p.numero} — Cancelado`,
+    html: (p) => plantillaHTML(p, {
+      preheader: `Tu pedido ${p.numero} fue cancelado.`,
+      titulo: "Pedido cancelado",
+      intro: "Cancelamos tu pedido",
+      pasoActual: null,
+      aviso: "<b>Este pedido fue cancelado.</b> Si crees que es un error o quieres volver a hacerlo, escríbenos por WhatsApp al 849-577-9893.",
+      cuerpo: "",
+    }),
+    texto: (p) => `Hola${primerNombre(p) ? " " + primerNombre(p) : ""},\n\nTu pedido ${p.numero} fue cancelado. Si crees que esto es un error o quieres volver a hacer el pedido, escríbenos por WhatsApp (849-577-9893).\n\nGracias por tu comprensión.`,
+  },
+};
+
+async function enviarCorreoCliente(pedido, clave, attachments = []) {
+  const correo = CORREOS[clave];
+  if (!correo || !pedido.cliente_email) return { ok: false, motivo: "sin plantilla o sin correo" };
   const transportador = crearTransportador();
   await transportador.sendMail({
     from: { name: "Buenos Prints", address: process.env.SMTP_USER },
     to: pedido.cliente_email,
     replyTo: process.env.TALLER_EMAIL || process.env.SMTP_USER,
-    subject: `Recibimos tu pedido ${pedido.numero} — Buenos Prints`,
-    text: textoConfirmacion(pedido, linkRastreo),
-    html: htmlConfirmacion(pedido, linkRastreo),
-    attachments: pdfBuffer ? [{ filename: `Cotizacion-${pedido.numero}.pdf`, content: pdfBuffer }] : [],
+    subject: correo.asunto(pedido),
+    text: `${correo.texto(pedido)}\n\nSigue tu pedido: ${urlRastreo(pedido)}\n\n— Buenos Prints`,
+    html: correo.html(pedido),
+    attachments,
   });
   return { ok: true };
+}
+
+// Confirmación al crear el pedido (con la cotización en PDF adjunta).
+// Lanza error si el SMTP falla (server.js lo atrapa: el pedido se crea igual).
+function enviarConfirmacionAlCliente(pedido, pdfBuffer) {
+  const adjuntos = pdfBuffer ? [{ filename: `Cotizacion-${pedido.numero}.pdf`, content: pdfBuffer }] : [];
+  return enviarCorreoCliente(pedido, "confirmacion", adjuntos);
+}
+
+// Actualización cuando el taller cambia el Estado en el Sheet. "cotizado" no
+// tiene correo (es el estado inicial: el cliente ya recibió la confirmación).
+function enviarActualizacionAlCliente(pedido, estado) {
+  if (estado === "confirmacion") return Promise.resolve({ ok: false, motivo: "estado inválido" });
+  return enviarCorreoCliente(pedido, estado);
 }
 
 module.exports = {
@@ -278,6 +339,6 @@ module.exports = {
   enviarActualizacionAlCliente,
   enviarConfirmacionAlCliente,
   // expuestos para pruebas / vista previa
-  htmlConfirmacion,
+  CORREOS,
   pasosHTML,
 };
