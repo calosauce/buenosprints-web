@@ -177,8 +177,8 @@ function plantillaHTML(pedido, { preheader, titulo, intro, pasoActual, aviso, cu
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.bg}"><tr><td align="center" style="padding:24px 12px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px">
 
-  <tr><td style="background:${C.accent};border:2px solid ${C.ink};border-radius:22px 22px 0 0;padding:16px 22px">
-    <a href="https://buenosprints.com" style="text-decoration:none"><img src="${URL_LOGO}" width="200" height="50" alt="Buenos Prints" style="display:block;border:0;width:200px;height:auto;max-width:100%;font:800 24px ${FUENTE_TITULO};color:#FFFFFF"></a>
+  <tr><td align="center" style="background:${C.accent};border:2px solid ${C.ink};border-radius:22px 22px 0 0;padding:16px 22px;text-align:center">
+    <a href="https://buenosprints.com" style="text-decoration:none;display:inline-block"><img src="${URL_LOGO}" width="200" height="50" alt="Buenos Prints" style="display:block;margin:0 auto;border:0;width:200px;height:auto;max-width:100%;font:800 24px ${FUENTE_TITULO};color:#FFFFFF"></a>
   </td></tr>
 
   <tr><td style="background:${C.paper};border:2px solid ${C.ink};border-top:0;border-radius:0 0 22px 22px;padding:26px 24px">
