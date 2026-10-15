@@ -1029,10 +1029,23 @@ function conBorde(svg) {
   const m = svg.match(/^<svg viewBox="([^"]+)">([\s\S]*)<\/svg>$/);
   if (!m) return svg;
   const [x, y, w, h] = m[1].split(/\s+/).map(Number);
-  const pad = BORDE / 2 + 1;
+  // El contorno negro de cada forma tapa la mitad interior del trazo blanco;
+  // por eso cada forma con contorno lleva un trazo blanco de BORDE + su propio
+  // grosor. Así el blanco VISIBLE es igual en todos los diseños (antes solo
+  // "Sticker Lover", que no tiene contorno, lo mostraba completo).
+  let maxTrazo = 0;
   const silueta = m[2]
-    .replace(/\s(fill|stroke|stroke-width|stroke-dasharray)="[^"]*"/g, "")
-    .replace(/>[^<]+</g, "><"); // los <text> conservan su forma; el contenido da igual
+    .replace(/>[^<]+</g, "><") // los <text> conservan su forma; el contenido da igual
+    .replace(/<(\w+)([^>]*?)(\/?)>/g, (tag, nombre, attrs, cierre) => {
+      if (nombre === "g" || nombre === "svg") return tag;
+      const sw = attrs.match(/\sstroke-width="([\d.]+)"/);
+      const conTrazo = sw && !/\sstroke="none"/.test(attrs);
+      const extra = conTrazo ? Number(sw[1]) : 0;
+      if (extra > maxTrazo) maxTrazo = extra;
+      const limpio = attrs.replace(/\s(fill|stroke|stroke-width|stroke-dasharray)="[^"]*"/g, "");
+      return `<${nombre}${limpio}${extra ? ` stroke-width="${BORDE + extra}"` : ""}${cierre}>`;
+    });
+  const pad = (BORDE + maxTrazo) / 2 + 1;
   const vb = `${x - pad} ${y - pad} ${w + 2 * pad} ${h + 2 * pad}`;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}"><g fill="#fff" stroke="#fff" stroke-width="${BORDE}" stroke-linejoin="round" stroke-linecap="round">${silueta}</g>${m[2]}</svg>`;
 }
@@ -1093,8 +1106,8 @@ function stickerHTML(svgOriginal, pliegue, i = 0) {
     `<span class="hs-solapa" style="transform:translate(${tx},${ty}) matrix(${a.toFixed(5)},${b.toFixed(5)},${b.toFixed(5)},${d.toFixed(5)},0,0);filter:${sombra}">` +
     `<i style="clip-path:${poligono(SOLAPA, s1, s2)};-webkit-mask-image:${mascara};mask-image:${mascara};background:${fondo}"></i></span></span>`;
 }
-const PLIEGUE_DEMO = [{ esquina: "br", c: 1.517, cmax: 1.667 }, { esquina: "tr", c: 1.676, cmax: 1.826 }, { esquina: "tl", c: 1.547, cmax: 1.647 }, { esquina: "tl", c: 1.675, cmax: 1.825 }, { esquina: "br", c: 1.46, cmax: 1.61 }];
-const PLIEGUE_MINI = { stickers: [PLIEGUE_DEMO[0], PLIEGUE_DEMO[1]], etiquetas: [{ esquina: "br", c: 1.493, cmax: 1.643 }, { esquina: "tr", c: 1.711, cmax: 1.861 }], muestras: [PLIEGUE_DEMO[3], PLIEGUE_DEMO[2]], hojas: [{ esquina: "br", c: 1.653, cmax: 1.803 }, { esquina: "tr", c: 1.684, cmax: 1.834 }] };
+const PLIEGUE_DEMO = [{ esquina: "br", c: 1.515, cmax: 1.665 }, { esquina: "tr", c: 1.673, cmax: 1.823 }, { esquina: "tl", c: 1.55, cmax: 1.65 }, { esquina: "tl", c: 1.669, cmax: 1.819 }, { esquina: "br", c: 1.46, cmax: 1.61 }];
+const PLIEGUE_MINI = { stickers: [PLIEGUE_DEMO[0], PLIEGUE_DEMO[1]], etiquetas: [{ esquina: "br", c: 1.495, cmax: 1.645 }, { esquina: "tr", c: 1.71, cmax: 1.86 }], muestras: [PLIEGUE_DEMO[3], PLIEGUE_DEMO[2]], hojas: [{ esquina: "br", c: 1.65, cmax: 1.8 }, { esquina: "tr", c: 1.68, cmax: 1.83 }] };
 
 try {
   if (window.CSS && CSS.registerProperty) {
