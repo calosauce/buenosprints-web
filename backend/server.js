@@ -179,22 +179,6 @@ app.get("/api/rastreo/:numero", async (req, res) => {
   }
 });
 
-// TEMPORAL — prueba de correos de estado sin pasar por el Sheet. Solo
-// funciona con pedidos de prueba (nombre "PRUEBA…" y correo = el del
-// taller), así no puede tocar pedidos reales. Se elimina tras la prueba.
-app.post("/api/prueba/:numero/estado", async (req, res) => {
-  const { estado } = req.body || {};
-  if (!ESTADOS.includes(estado)) return res.status(400).json({ error: "Estado inválido." });
-  const actual = await obtenerPedido(req.params.numero);
-  const correoTaller = (process.env.TALLER_EMAIL || process.env.SMTP_USER || "").toLowerCase();
-  const esPrueba = actual && /^PRUEBA/i.test(actual.cliente_nombre || "") && (actual.cliente_email || "").toLowerCase() === correoTaller;
-  if (!esPrueba) return res.status(404).json({ error: "Solo pedidos de prueba." });
-  const pedido = await actualizarEstado(actual.numero, estado);
-  let correoEnviado = false;
-  try { correoEnviado = Boolean((await enviarActualizacionAlCliente(pedido, estado))?.ok); } catch (err) { console.error(err.message); }
-  res.json({ ok: true, estado: pedido.estado, correoEnviado });
-});
-
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
 app.listen(PORT, () => console.log(`Buenos Prints backend escuchando en :${PORT}`));
