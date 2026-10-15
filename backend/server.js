@@ -2,7 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 
-const { crearPedido, obtenerPedido, marcarPagado, actualizarEstado, ESTADOS } = require("./lib/db");
+const { crearPedido, obtenerPedido, marcarPagado, actualizarEstado, ESTADOS, limpiarPedidoDePrueba } = require("./lib/db");
 const { generarPDFPedido } = require("./lib/pdf");
 const { enviarCotizacionAlTaller, enviarActualizacionAlCliente } = require("./lib/email");
 const { linkWhatsApp } = require("./lib/whatsapp");
@@ -113,12 +113,12 @@ app.post("/api/pedidos/:numero/estado", async (req, res) => {
   }
 });
 
-// TEMPORAL — diagnóstico de solo lectura, para confirmar si el Apps Script
-// ya logró cambiar el estado de un pedido. Se quita apenas se use.
-app.get("/api/admin/ver-bf1d1496027e5104471a644f/:numero", async (req, res) => {
-  const pedido = await obtenerPedido(req.params.numero);
-  if (!pedido) return res.status(404).json({ error: "Pedido no encontrado" });
-  res.json({ numero: pedido.numero, estado: pedido.estado, pagado_en: pedido.pagado_en });
+// TEMPORAL — limpieza de un solo uso: borra el pedido de prueba usado para
+// probar el disparador de Apps Script y regresa el contador del año al
+// número anterior. Se quita apenas se use.
+app.post("/api/admin/limpiar-prueba-0d4a7f2e9b1c3a5", async (req, res) => {
+  const resultado = await limpiarPedidoDePrueba("BP-2026-000717", 716);
+  res.json({ ok: true, resultado });
 });
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
