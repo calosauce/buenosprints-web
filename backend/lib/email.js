@@ -261,7 +261,7 @@ function htmlTaller(p, linkWa, nArchivos) {
     <p style="margin:20px 0 0;font:13px/1.5 ${FUENTE};color:${C.muted}">Adjuntos: la cotización en PDF${nArchivos ? ` y ${nArchivos} archivo(s) de diseño que subió el cliente` : ""}.</p>`;
 
   return marcoHTML({
-    compacto: true,
+    simple: true,
     preheader: `${p.cliente_nombre || "Cliente"} · ${rd(p.total)} · ${items.length} diseño(s)${avisos.length ? " · revisar avisos" : ""}`,
     tituloPagina: `Nuevo pedido ${p.numero}`,
     contenido: `<h1 style="margin:0 0 4px;font:800 24px/1.1 ${FUENTE_TITULO};color:${C.ink};letter-spacing:-.02em">Nuevo pedido</h1>
@@ -272,10 +272,21 @@ function htmlTaller(p, linkWa, nArchivos) {
 }
 
 // Header rojo con el logo + tarjeta blanca + pie. Compartido por todos.
-function marcoHTML({ preheader, tituloPagina, contenido, compacto = false }) {
-  // compacto (correo del taller): franja y logo más bajos para que la
-  // información y el botón de WhatsApp queden visibles sin bajar.
-  const padCab = compacto ? "9px 18px" : "16px 22px", anchoLogo = compacto ? 120 : 200;
+function marcoHTML({ preheader, tituloPagina, contenido, simple = false }) {
+  // simple (correo interno del taller): sin header, logo, fondo crema ni
+  // marco; todo pegado al margen izquierdo sobre blanco, para leerlo rápido
+  // en la PC del taller y copiar/pegar datos sin arrastrar diseño.
+  if (simple) {
+    return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light"><title>${esc(tituloPagina)}</title></head>
+<body style="margin:0;padding:0;background:#FFFFFF">
+<div style="display:none;max-height:0;overflow:hidden">${esc(preheader)}</div>
+<div style="max-width:640px;padding:16px 12px;text-align:left">
+${contenido}
+</div>
+</body></html>`;
+  }
+  const padCab = "16px 22px", anchoLogo = 200;
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light"><title>${esc(tituloPagina)}</title></head>
 <body style="margin:0;padding:0;background:${C.bg}">
