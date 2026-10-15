@@ -131,7 +131,15 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;backgroun
 .collage{position:relative;height:360px;max-width:560px;width:100%;justify-self:center}
 @media(max-width:959px){.collage{order:-1;height:250px;max-width:420px}}
 @media(min-width:960px){.collage{height:470px}}
-.hs{position:absolute;filter:drop-shadow(4px 0 0 var(--paper)) drop-shadow(-4px 0 0 var(--paper)) drop-shadow(0 4px 0 var(--paper)) drop-shadow(0 -4px 0 var(--paper)) drop-shadow(0 10px 12px rgba(23,20,15,.28));animation:float 6s ease-in-out infinite}
+/* El borde blanco va dibujado DENTRO de cada SVG (ver conBorde() en el JS):
+   antes se simulaba con 4 sombras desplazadas y quedaban escalones/huecos en
+   curvas y diagonales. Aquí solo queda la sombra suave. */
+.hs{position:absolute;filter:drop-shadow(0 10px 12px rgba(23,20,15,.28));animation:float 6s ease-in-out infinite}
+/* Doblez de "sticker despegándose": la cara se recorta en diagonal y la
+   solapa (el reverso del papel) se refleja sobre esa línea. */
+.hs-cara{display:block}
+.hs-solapa{position:absolute;inset:0;transform-origin:0 0;pointer-events:none}
+.hs-solapa i{position:absolute;inset:0;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
 .hs svg,.hs img{width:100%;height:100%;display:block;object-fit:contain}
 .hs:nth-child(1){width:44%;left:2%;top:4%;--r:-9deg}
 .hs:nth-child(2){width:38%;right:3%;top:0;--r:8deg;animation-delay:-1.5s}
@@ -162,7 +170,6 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;backgroun
 /* Brillo diagonal tipo videojuego retro, solo en el PRIMER mini-sticker de cada tarjeta */
 [data-art]{position:relative}
 [data-art] .hs{transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
-[data-art] .hs:first-child{overflow:hidden;border-radius:10%}
 /* (se quitó el brillo animado de lado a lado sobre los stickers de Productos) */
 @keyframes shineSweep{0%,28%{transform:translateX(-140%)}58%,100%{transform:translateX(140%)}}
 /* Al pasar el mouse por la tarjeta, los dos mini-stickers se separan y se levantan un poco */
@@ -1001,12 +1008,76 @@ const MINI = {
   hojas: [`<svg viewBox="0 0 200 200"><rect x="14" y="14" width="172" height="172" rx="14" fill="#FFF8EC" stroke="#17140F" stroke-width="5"/><circle cx="60" cy="62" r="28" fill="#FF4D2E" stroke="#17140F" stroke-width="4"/><rect x="108" y="36" width="58" height="44" rx="10" fill="#7CC6FE" stroke="#17140F" stroke-width="4"/><circle cx="60" cy="140" r="26" fill="#FFC93C" stroke="#17140F" stroke-width="4"/><rect x="110" y="118" width="56" height="50" rx="12" fill="#FF8FC7" stroke="#17140F" stroke-width="4"/></svg>`,
           `<svg viewBox="0 0 200 160"><rect x="10" y="10" width="180" height="140" rx="12" fill="#FFFFFF" stroke="#17140F" stroke-width="5"/><rect x="24" y="24" width="152" height="112" rx="6" fill="none" stroke="#17140F" stroke-width="2" stroke-dasharray="6 6"/><text x="100" y="92" ${T} font-size="24" fill="#17140F">TU HOJA</text></svg>`],
 };
+/* ---------- Stickers: borde blanco real + doblez de esquina ----------
+   conBorde(): agrega al SVG una copia de todas sus formas pintada de blanco
+   con un trazo grueso, DETRÁS del diseño. Así el borde sigue exactamente la
+   silueta (como el corte real de un sticker), sin escalones.
+   PLIEGUE: qué esquina se "despega" en cada diseño y dónde cae el doblez.
+   `c` es la posición de la línea del doblez medida sobre la diagonal de esa
+   esquina (0 = esquina opuesta, 2 = la esquina misma); se calculó para que
+   cada doblez levante una franja leve de la silueta de ese diseño. */
+const BORDE = 10; // grosor del borde blanco, en unidades del viewBox (~2.5% del ancho)
+function conBorde(svg) {
+  const m = svg.match(/^<svg viewBox="([^"]+)">([\s\S]*)<\/svg>$/);
+  if (!m) return svg;
+  const [x, y, w, h] = m[1].split(/\s+/).map(Number);
+  const pad = BORDE / 2 + 1;
+  const silueta = m[2]
+    .replace(/\s(fill|stroke|stroke-width|stroke-dasharray)="[^"]*"/g, "")
+    .replace(/>[^<]+</g, "><"); // los <text> conservan su forma; el contenido da igual
+  const vb = `${x - pad} ${y - pad} ${w + 2 * pad} ${h + 2 * pad}`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}"><g fill="#fff" stroke="#fff" stroke-width="${BORDE}" stroke-linejoin="round" stroke-linecap="round">${silueta}</g>${m[2]}</svg>`;
+}
+// Esquinas: s = dirección (+1/-1) en x e y hacia la esquina que se dobla.
+const ESQUINAS = { br: [1, 1], tr: [1, -1], bl: [-1, 1], tl: [-1, -1] };
+// Recorta el cuadrado unitario con el semiplano s1*u + s2*v + k >= c (o <=).
+function recorteUnitario(s1, s2, c, mayor) {
+  const k = (s1 < 0 ? 1 : 0) + (s2 < 0 ? 1 : 0);
+  const f = ([u, v]) => (s1 * u + s2 * v + k - c) * (mayor ? 1 : -1);
+  const cuad = [[0, 0], [1, 0], [1, 1], [0, 1]], out = [];
+  for (let i = 0; i < 4; i++) {
+    const a = cuad[i], b = cuad[(i + 1) % 4], fa = f(a), fb = f(b);
+    if (fa >= 0) out.push(a);
+    if ((fa >= 0) !== (fb >= 0)) { const t = fa / (fa - fb); out.push([a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])]); }
+  }
+  return `polygon(${out.map(([u, v]) => `${(u * 100).toFixed(2)}% ${(v * 100).toFixed(2)}%`).join(",")})`;
+}
+function aspecto(svg) {
+  const m = svg.match(/viewBox="([^"]+)"/);
+  if (!m) return 1;
+  const [, , w, h] = m[1].split(/\s+/).map(Number);
+  return w / h;
+}
+// Devuelve el interior de un .hs: la cara recortada + la solapa reflejada.
+function stickerHTML(svgOriginal, pliegue) {
+  const svg = conBorde(svgOriginal);
+  if (!pliegue) return `<span class="hs-cara">${svg}</span>`;
+  const [s1, s2] = ESQUINAS[pliegue.esquina], c = pliegue.c, k = (s1 < 0 ? 1 : 0) + (s2 < 0 ? 1 : 0);
+  const r = aspecto(svg), q = 1 + r * r;
+  // Reflexión sobre la línea s1*x/w + s2*y/h + k = c (en px), escrita con
+  // translate(%) para que no dependa del tamaño en pantalla, solo del aspecto.
+  const a = 1 - 2 / q, d = 1 - 2 * r * r / q, b = -2 * s1 * s2 * r / q;
+  const tx = 2 * (c - k) * s1 / q * 100, ty = 2 * (c - k) * s2 * r * r / q * 100;
+  const mascara = `url('data:image/svg+xml,${encodeURIComponent(svg).replace(/'/g, "%27")}')`;
+  const sombra = `drop-shadow(${-s1 * 2}px ${-s2 * 2}px 2.5px rgba(23,20,15,.32))`;
+  const fondo = `linear-gradient(${s2 > 0 ? (s1 > 0 ? 315 : 45) : (s1 > 0 ? 225 : 135)}deg,#FFFFFF 0%,#F4EFE6 55%,#DDD5C7 100%)`;
+  return `<span class="hs-cara" style="clip-path:${recorteUnitario(s1, s2, c, false)}">${svg}</span>` +
+    `<span class="hs-solapa" style="transform:translate(${tx.toFixed(3)}%,${ty.toFixed(3)}%) matrix(${a.toFixed(5)},${b.toFixed(5)},${b.toFixed(5)},${d.toFixed(5)},0,0);filter:${sombra}">` +
+    `<i style="clip-path:${recorteUnitario(s1, s2, c, true)};-webkit-mask-image:${mascara};mask-image:${mascara};background:${fondo}"></i></span>`;
+}
+const PLIEGUE_DEMO = [{ esquina: "br", c: 1.517 }, { esquina: "tr", c: 1.676 }, { esquina: "tl", c: 1.547 }, { esquina: "tl", c: 1.675 }, { esquina: "br", c: 1.46 }];
+const PLIEGUE_MINI = { stickers: [PLIEGUE_DEMO[0], PLIEGUE_DEMO[1]], etiquetas: [{ esquina: "br", c: 1.493 }, { esquina: "tr", c: 1.711 }], muestras: [PLIEGUE_DEMO[3], PLIEGUE_DEMO[2]], hojas: [{ esquina: "br", c: 1.653 }, { esquina: "tr", c: 1.684 }] };
+
 function renderCollage() {
-  const src = CONFIG.HERO_STICKERS.length ? CONFIG.HERO_STICKERS.slice(0, 5).map(u => `<img src="${esc(u)}" alt="">`) : DEMO;
+  // Fotos propias (HERO_STICKERS) se muestran tal cual: ya traen su borde real.
+  const src = CONFIG.HERO_STICKERS.length
+    ? CONFIG.HERO_STICKERS.slice(0, 5).map(u => `<img src="${esc(u)}" alt="">`)
+    : DEMO.map((svg, i) => stickerHTML(svg, PLIEGUE_DEMO[i]));
   $("#collage").innerHTML = src.map(s => `<div class="hs">${s}</div>`).join("");
   $$("[data-art]").forEach(el => {
     const [a, b] = MINI[el.dataset.art];
-    el.innerHTML = `<div class="hs" style="position:absolute;width:42%;left:12%;top:16%;--r:-8deg;animation:none;transform:rotate(-8deg)">${a}</div><div class="hs" style="position:absolute;width:40%;right:10%;top:28%;--r:7deg;animation:none;transform:rotate(7deg)">${b}</div>`;
+    const [pa, pb] = PLIEGUE_MINI[el.dataset.art] || [];
+    el.innerHTML = `<div class="hs" style="position:absolute;width:42%;left:12%;top:16%;--r:-8deg;animation:none;transform:rotate(-8deg)">${stickerHTML(a, pa)}</div><div class="hs" style="position:absolute;width:40%;right:10%;top:28%;--r:7deg;animation:none;transform:rotate(7deg)">${stickerHTML(b, pb)}</div>`;
   });
   if (CONFIG.TRABAJOS.length) {
     $("#trabajos").hidden = false;
