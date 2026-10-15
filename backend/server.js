@@ -113,22 +113,6 @@ app.post("/api/pedidos/:numero/estado", async (req, res) => {
   }
 });
 
-// TEMPORAL — limpieza del pedido de prueba BP-2026-000717 (usado para
-// probar las notificaciones de cambio de estado) y reinicio del contador
-// del año a 716. Se quita apenas se use una vez.
-app.post("/api/admin/mantenimiento-11b309b876df785ba1feda91", async (req, res) => {
-  const { pool } = require("./lib/db");
-  try {
-    await pool.query("DELETE FROM pedidos WHERE numero = ?", ["BP-2026-000717"]);
-    await pool.query(
-      "INSERT INTO contadores (clave, valor) VALUES ('pedido-2026', 716) ON DUPLICATE KEY UPDATE valor = 716"
-    );
-    res.json({ ok: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
 app.listen(PORT, () => console.log(`Buenos Prints backend escuchando en :${PORT}`));
