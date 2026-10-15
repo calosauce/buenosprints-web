@@ -10,7 +10,10 @@ const { registrarPedidoEnSheet } = require("./lib/sheets");
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: "15mb" })); // el carrito puede traer imágenes en base64
+// El carrito permite hasta 35 MB en archivos (CONFIG.MAX_MB_TOTAL en
+// index.html) codificados en base64 — eso infla el tamaño real en ~33%, así
+// que el límite aquí debe quedar bastante por encima de 35 MB, no igual.
+app.use(express.json({ limit: "50mb" }));
 
 const PORT = process.env.PORT || 3000;
 
