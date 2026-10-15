@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style>
 <title>Buenos Prints</title>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#FF4D2E">
 <meta name="description" content="Stickers y etiquetas personalizadas: troqueladas, laminadas y resistentes al agua, en gloss o matte. Arma tu pedido y sube tu diseño en Santo Domingo.">
 <meta property="og:title" content="Buenos Prints — Stickers y etiquetas personalizadas">
 <meta property="og:description" content="Troquelados, laminados y resistentes al agua. Arma tu pedido online.">
@@ -71,7 +76,7 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;backgroun
 .burger span,.burger span::before,.burger span::after{display:block;width:18px;height:2px;background:var(--ink);position:relative;content:""}
 .burger span::before{position:absolute;top:-6px}.burger span::after{position:absolute;top:6px}
 .drawer{border-top:1px solid var(--line);background:var(--bg);padding:8px 16px 16px}
-.drawer a{display:block;padding:12px 4px;font-weight:700;text-decoration:none;border-bottom:1px solid var(--line);font-size:18px}
+.drawer a{display:block;padding:12px 4px;font-weight:700;text-decoration:none;color:var(--ink);border-bottom:1px solid var(--line);font-size:18px}
 .drawer a small{display:block;font-weight:400;color:var(--muted);font-size:14px}
 @media(min-width:960px){.menu{display:flex}.burger,.drawer{display:none!important}.hide-lg{display:none}}
 @media(max-width:959px){.show-lg{display:none!important}}
@@ -125,7 +130,7 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;backgroun
 .trustlogo{display:flex;align-items:center}
 .trustlogo img{height:100%;width:auto;display:block;opacity:.75;filter:brightness(0) invert(1)}
 @keyframes trustScroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-@media(prefers-reduced-motion:reduce){.hs{animation:none;transform:rotate(var(--r))}html{scroll-behavior:auto}[data-art] .hs:first-child::after,.mat .sw.gloss::after,.mat .sw.gloss:hover::after,.opt:hover .swatch.gloss::after{animation:none;display:none}.mat .sw.gloss,.mat .sw.gloss:hover,.opt:hover .swatch.gloss{animation:none}.prod:hover [data-art] .hs{transition:none;transform:rotate(var(--r)) !important}}
+@media(prefers-reduced-motion:reduce){.hs{animation:none;transform:rotate(var(--r))}html{scroll-behavior:auto}.mat .sw.gloss::after,.swatch.gloss::after{animation:none;display:none}.mat .sw.gloss,.swatch.gloss{animation:none}.prod:hover [data-art] .hs{transition:none;transform:rotate(var(--r)) !important}}
 
 /* Products */
 .prods{display:grid;gap:16px;margin-top:28px}
@@ -140,7 +145,7 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;backgroun
 [data-art]{position:relative}
 [data-art] .hs{transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
 [data-art] .hs:first-child{overflow:hidden;border-radius:10%}
-[data-art] .hs:first-child::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 32%,rgba(255,255,255,.85) 47%,rgba(255,255,255,.85) 53%,transparent 68%);transform:translateX(-140%);animation:shineSweep 3.4s ease-in-out infinite;pointer-events:none}
+/* (se quitó el brillo animado de lado a lado sobre los stickers de Productos) */
 @keyframes shineSweep{0%,28%{transform:translateX(-140%)}58%,100%{transform:translateX(140%)}}
 /* Al pasar el mouse por la tarjeta, los dos mini-stickers se separan y se levantan un poco */
 .prod:hover [data-art] .hs:nth-child(1){transform:rotate(var(--r)) translate(-6px,-9px) scale(1.08) !important}
@@ -164,8 +169,8 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;backgroun
 @media(min-width:520px){.mat{grid-template-columns:150px 1fr}}
 .mat .sw{min-height:150px;position:relative}
 .mat .sw.gloss{background:linear-gradient(130deg,#FFFFFF 0%,#FF9A85 18%,var(--accent) 42%,#FFC9BE 56%,var(--accent) 72%,#C93A20 100%);background-size:230% 230%;overflow:hidden;cursor:pointer}
-.mat .sw.gloss:hover{animation:glossShift 4.5s ease-in-out infinite}
-.mat .sw.gloss:hover::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.4) 42%,rgba(255,255,255,.95) 50%,rgba(255,255,255,.4) 58%,transparent 70%);transform:translateX(-150%);animation:shineSweep 2.6s ease-in-out infinite;pointer-events:none}
+.mat .sw.gloss{animation:glossShift 4.5s ease-in-out infinite}
+.mat .sw.gloss::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.4) 42%,rgba(255,255,255,.95) 50%,rgba(255,255,255,.4) 58%,transparent 70%);transform:translateX(-150%);animation:shineSweep 2.6s ease-in-out infinite;pointer-events:none}
 @keyframes glossShift{0%,100%{background-position:15% 30%}50%{background-position:85% 70%}}
 .mat .sw.matte{background:#E8674E;background-image:radial-gradient(rgba(255,255,255,.08) 1px,transparent 1px);background-size:4px 4px}
 .mat .sw span{position:absolute;left:12px;bottom:12px;background:var(--paper);border:1.5px solid var(--ink);border-radius:999px;font-size:12px;font-weight:700;padding:2px 10px}
@@ -228,8 +233,8 @@ details.alt input{margin-top:8px}
 .opt .tag{position:absolute;top:-10px;right:8px;background:var(--sun);border:1.5px solid var(--ink);border-radius:999px;font-size:11px;font-weight:700;padding:1px 8px}
 .swatch{width:36px;height:36px;border-radius:10px;border:2px solid var(--ink);flex:none}
 .swatch.gloss{background:linear-gradient(135deg,#FFFFFF 0%,#FF9A85 30%,var(--accent) 55%,#FFD3C9 70%,var(--accent) 100%);background-size:230% 230%;position:relative;overflow:hidden}
-.opt:hover .swatch.gloss{animation:glossShift 4.5s ease-in-out infinite}
-.opt:hover .swatch.gloss::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.4) 42%,rgba(255,255,255,.95) 50%,rgba(255,255,255,.4) 58%,transparent 70%);transform:translateX(-150%);animation:shineSweep 1.8s ease-in-out infinite;pointer-events:none}
+.swatch.gloss{animation:glossShift 4.5s ease-in-out infinite}
+.swatch.gloss::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.4) 42%,rgba(255,255,255,.95) 50%,rgba(255,255,255,.4) 58%,transparent 70%);transform:translateX(-150%);animation:shineSweep 1.8s ease-in-out infinite;pointer-events:none}
 .swatch.matte{background:#E8674E}
 .shape-ic{width:36px;height:36px;flex:none}
 
