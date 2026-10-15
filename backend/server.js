@@ -113,6 +113,20 @@ app.post("/api/pedidos/:numero/estado", async (req, res) => {
   }
 });
 
+// TEMPORAL — diagnóstico de la integración con Google Sheets (se quita en
+// cuanto se confirme que funciona). Reintenta el registro en Sheets de un
+// pedido YA EXISTENTE, sin crear uno nuevo ni gastar otro número real.
+app.get("/api/admin/test-sheets-f0c3f7ec1b7cde6738bfbaee/:numero", async (req, res) => {
+  const pedido = await obtenerPedido(req.params.numero);
+  if (!pedido) return res.status(404).json({ error: "Pedido no encontrado" });
+  try {
+    const resultado = await registrarPedidoEnSheet(pedido);
+    res.json({ resultado });
+  } catch (err) {
+    res.status(500).json({ error: err.message, stack: err.stack });
+  }
+});
+
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
 app.listen(PORT, () => console.log(`Buenos Prints backend escuchando en :${PORT}`));
