@@ -167,4 +167,4 @@ async function marcarPagado(numero) {
   return actualizarEstado(numero, "pagado_produccion");
 }
 
-module.exports = { crearPedido, obtenerPedido, marcarPagado, actualizarEstado, ESTADOS, ESTADOS_PAGADOS, pool };
+module.exports = { crearPedido, obtenerPedido, marcarPagado, actualizarEstado, ESTADOS, ESTADOS_PAGADOS };
