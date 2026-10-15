@@ -113,6 +113,14 @@ app.post("/api/pedidos/:numero/estado", async (req, res) => {
   }
 });
 
+// TEMPORAL — diagnóstico de solo lectura, para confirmar si el Apps Script
+// ya logró cambiar el estado de un pedido. Se quita apenas se use.
+app.get("/api/admin/ver-bf1d1496027e5104471a644f/:numero", async (req, res) => {
+  const pedido = await obtenerPedido(req.params.numero);
+  if (!pedido) return res.status(404).json({ error: "Pedido no encontrado" });
+  res.json({ numero: pedido.numero, estado: pedido.estado, pagado_en: pedido.pagado_en });
+});
+
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
 app.listen(PORT, () => console.log(`Buenos Prints backend escuchando en :${PORT}`));
