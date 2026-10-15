@@ -4,9 +4,9 @@ const cors = require("cors");
 
 const { crearPedido, obtenerPedido, marcarPagado, actualizarEstado, ESTADOS } = require("./lib/db");
 const { generarPDFPedido } = require("./lib/pdf");
-const { enviarCotizacionAlTaller, enviarActualizacionAlCliente, enviarConfirmacionAlCliente } = require("./lib/email");
+const { enviarCotizacionAlTaller, enviarActualizacionAlCliente, enviarConfirmacionAlCliente, enviarRecordatorioCupon } = require("./lib/email");
 const { telefonoCoincide, vistaPublica, crearLimitador } = require("./lib/rastreo");
-const { cuponParaPedido, consultarCupon, usarCupon, esCuponDeFidelidad } = require("./lib/cupones");
+const { cuponParaPedido, consultarCupon, usarCupon, esCuponDeFidelidad, cuponesPorRecordar, reservarRecordatorio, liberarRecordatorio, diasEntre, hoyRD } = require("./lib/cupones");
 const { linkWhatsApp } = require("./lib/whatsapp");
 const { registrarPedidoEnSheet } = require("./lib/sheets");
 
@@ -230,6 +230,47 @@ app.get("/api/cupones/:codigo", async (req, res) => {
   }
 });
 
+// TEMPORAL — enviar correos de prueba (entregado + recordatorio) a pedidos
+// de prueba (nombre "PRUEBA…" y correo = el del taller). Se elimina tras la prueba.
+app.post("/api/prueba/:numero/correos", async (req, res) => {
+  const actual = await obtenerPedido(req.params.numero);
+  const correoTaller = (process.env.TALLER_EMAIL || process.env.SMTP_USER || "").toLowerCase();
+  const esPrueba = actual && /^PRUEBA/i.test(actual.cliente_nombre || "") && (actual.cliente_email || "").toLowerCase() === correoTaller;
+  if (!esPrueba) return res.status(404).json({ error: "Solo pedidos de prueba." });
+  const pedido = await actualizarEstado(actual.numero, "entregado");
+  const cupon = await cuponParaPedido(pedido.numero);
+  const r1 = await enviarActualizacionAlCliente(pedido, "entregado", { cupon });
+  const r2 = await enviarRecordatorioCupon(pedido, cupon, diasEntre(hoyRD(), cupon.expira) > 5 ? 5 : diasEntre(hoyRD(), cupon.expira));
+  res.json({ ok: true, cupon: { codigo: cupon.codigo, expira: cupon.expira }, entregado: r1.ok, recordatorio: r2.ok });
+});
+
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
+
+// Recordatorio automático: cada hora busca pergaminos sin usar que vencen en
+// 5 días o menos y le escribe una sola vez al cliente. Solo envía entre 9am y
+// 8pm de Santo Domingo para no llegar de madrugada; si en esa franja el
+// servidor estuvo apagado, lo envía en la siguiente revisión.
+async function revisarRecordatorios() {
+  const horaRD = (new Date().getUTCHours() + 24 - 4) % 24;
+  if (horaRD < 9 || horaRD >= 20) return;
+  let pendientes = [];
+  try {
+    pendientes = await cuponesPorRecordar(5);
+  } catch (err) {
+    return console.error("Recordatorios:", err.message);
+  }
+  for (const { cupon, pedido } of pendientes) {
+    try {
+      if (!(await reservarRecordatorio(cupon.codigo))) continue;
+      await enviarRecordatorioCupon(pedido, cupon, diasEntre(hoyRD(), cupon.expira));
+      console.log(`Recordatorio enviado: ${cupon.codigo} (${pedido.numero})`);
+    } catch (err) {
+      console.error(`Recordatorio ${cupon.codigo}:`, err.message);
+      liberarRecordatorio(cupon.codigo).catch(() => {});
+    }
+  }
+}
+setTimeout(revisarRecordatorios, 60 * 1000);
+setInterval(revisarRecordatorios, 60 * 60 * 1000);
 
 app.listen(PORT, () => console.log(`Buenos Prints backend escuchando en :${PORT}`));

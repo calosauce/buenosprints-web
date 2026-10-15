@@ -31,9 +31,16 @@ function asegurarTablaCupones() {
           expira VARCHAR(10) NOT NULL,
           creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
           usado_en DATETIME NULL,
-          usado_pedido VARCHAR(32) NULL
+          usado_pedido VARCHAR(32) NULL,
+          recordatorio_en DATETIME NULL
         ) ENGINE=InnoDB;
       `);
+      // Por si la tabla ya existía sin la columna del recordatorio.
+      try {
+        await pool.query("ALTER TABLE cupones ADD COLUMN recordatorio_en DATETIME NULL");
+      } catch (err) {
+        if (err.code !== "ER_DUP_FIELDNAME") throw err;
+      }
     })().catch((err) => { tablaLista = null; throw err; });
   }
   return tablaLista;
@@ -119,7 +126,53 @@ async function usarCupon(codigo, numeroPedido) {
   return r.affectedRows === 1;
 }
 
+// "AAAA-MM-DD" + n días.
+function sumarDias(fechaISO, n) {
+  const [a, m, d] = fechaISO.split("-").map(Number);
+  return new Date(Date.UTC(a, m - 1, d + n)).toISOString().slice(0, 10);
+}
+
+// Cupones sin usar que vencen dentro de `dias` días (incluye hoy) y que
+// todavía no recibieron recordatorio, junto con los datos del pedido.
+async function cuponesPorRecordar(dias = 5) {
+  await asegurarTablaCupones();
+  const hoy = hoyRD();
+  const [filas] = await pool.query(
+    `SELECT c.codigo, c.porcentaje, c.expira, p.*
+       FROM cupones c JOIN pedidos p ON p.numero = c.pedido_origen
+      WHERE c.usado_en IS NULL AND c.recordatorio_en IS NULL
+        AND c.expira >= ? AND c.expira <= ?
+        AND p.cliente_email IS NOT NULL AND p.cliente_email <> ''`,
+    [hoy, sumarDias(hoy, dias)]
+  );
+  return filas.map((f) => ({
+    cupon: { codigo: f.codigo, porcentaje: f.porcentaje, expira: f.expira },
+    pedido: f,
+  }));
+}
+
+// "Reserva" el recordatorio antes de enviarlo (atómico): si dos procesos
+// corren a la vez, solo uno lo envía. Si el envío falla, se libera para
+// reintentar en la próxima revisión.
+async function reservarRecordatorio(codigo) {
+  const [r] = await pool.query("UPDATE cupones SET recordatorio_en = NOW() WHERE codigo = ? AND recordatorio_en IS NULL", [codigo]);
+  return r.affectedRows === 1;
+}
+async function liberarRecordatorio(codigo) {
+  await pool.query("UPDATE cupones SET recordatorio_en = NULL WHERE codigo = ?", [codigo]);
+}
+
+function diasEntre(desdeISO, hastaISO) {
+  const f = (iso) => { const [a, m, d] = iso.split("-").map(Number); return Date.UTC(a, m - 1, d); };
+  return Math.round((f(hastaISO) - f(desdeISO)) / 86400000);
+}
+
 module.exports = {
+  cuponesPorRecordar,
+  reservarRecordatorio,
+  liberarRecordatorio,
+  diasEntre,
+  sumarDias,
   PORCENTAJE,
   cuponParaPedido,
   consultarCupon,

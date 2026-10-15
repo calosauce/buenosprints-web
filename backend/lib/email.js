@@ -347,36 +347,48 @@ function fechaLarga(iso) {
 function urlUsarCupon(codigo) {
   return `${process.env.SITIO_URL || "https://buenosprints.com"}/?cupon=${encodeURIComponent(codigo)}#pedido`;
 }
-// Pergamino de descuento: tarjeta de "objeto" de juego de rol (diseño propio),
-// con rodillos de madera arriba y abajo. Solo tablas y colores sólidos para
-// que se vea igual en Gmail y Outlook.
+// Pergamino de descuento en estilo 8 bits (diseño propio): los rodillos y
+// las esquinas son imágenes pixel art (email/pergamino-arriba.png y
+// -abajo.png, generadas píxel por píxel, 4 px por píxel), y el cuerpo es una
+// tabla con bordes negros gruesos que calzan con esas imágenes. El código va
+// como TEXTO para que se pueda copiar. Solo tablas y colores sólidos.
 function pergaminoHTML(cupon) {
-  const madera = "#8A5A2B", papel = "#F6E7C1", tinta = "#4A2E12", oro = "#B7791F", morado = "#6B3FA0";
-  const rodillo = `<tr><td style="padding:0"><div style="height:16px;background:${madera};border:2px solid ${C.ink};border-radius:10px;font-size:0;line-height:0">&nbsp;</div></td></tr>`;
-  const fila = (k, v) => `<tr><td style="padding:3px 0;font:14px/1.4 ${FUENTE};color:${tinta}"><span style="color:${oro};font-weight:700">${k}:</span> ${v}</td></tr>`;
+  const base = process.env.SITIO_URL || "https://buenosprints.com";
+  const papel = "#F6E7C1", tinta = C.ink, cafe = "#5E3A17", oro = "#9A5B0B", morado = "#5B2E91";
+  const PIXEL = "'Courier New',Courier,monospace";
+  const tapa = (img) => `<tr><td style="padding:0;font-size:0;line-height:0"><img src="${base}/email/${img}" width="400" alt="" style="display:block;width:100%;height:auto;border:0"></td></tr>`;
+  const fila = (k, v) => `<tr><td style="padding:3px 0;font:15px/1.45 ${FUENTE};color:${cafe}"><span style="font:700 14px ${PIXEL};color:${oro}">&#9656; ${k}:</span> ${v}</td></tr>`;
+  const boton8 = `<a href="${esc(urlUsarCupon(cupon.codigo))}" style="display:inline-block;background:${C.accent};color:#FFFFFF;border:4px solid ${tinta};padding:12px 16px;font:700 15px ${PIXEL};letter-spacing:.02em;white-space:nowrap;text-transform:uppercase;text-decoration:none;box-shadow:4px 4px 0 ${tinta}">&#9654; Usar mi pergamino</a>`;
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:4px 0 22px"><tr><td align="center">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:400px">
-    ${rodillo}
-    <tr><td style="padding:0 12px">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${papel};border-left:2px solid ${C.ink};border-right:2px solid ${C.ink}">
-        <tr><td style="padding:18px 20px 20px">
-          <div style="font:700 11px ${FUENTE};letter-spacing:.14em;text-transform:uppercase;color:${morado};text-align:center">Objeto único · Solo para ti</div>
-          <div style="font:800 24px/1.15 ${FUENTE_TITULO};color:${tinta};text-align:center;margin:6px 0 12px">Pergamino de<br>Descuento ${cupon.porcentaje}%</div>
-          <div style="border-top:2px dashed ${madera};margin:0 0 10px;font-size:0;line-height:0">&nbsp;</div>
+    ${tapa("pergamino-arriba.png")}
+    <tr><td style="padding:0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed"><tr>
+      <td width="3%" style="width:3%;font-size:0;line-height:0">&nbsp;</td>
+      <td width="1%" style="width:1%;background:${tinta};font-size:0;line-height:0">&nbsp;</td>
+      <td width="92%" style="width:92%;background:${papel}">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        <tr><td style="padding:6px 14px 12px">
+          <div style="font:700 12px ${PIXEL};letter-spacing:.12em;text-transform:uppercase;color:${morado};text-align:center">&#9733; Objeto único &#9733;</div>
+          <div style="font:700 13px ${PIXEL};color:${morado};text-align:center;margin:2px 0 0">Solo para ti</div>
+          <div style="font:900 25px/1.15 ${PIXEL};text-transform:uppercase;color:${tinta};text-align:center;margin:10px 0 12px;letter-spacing:.02em">Pergamino de<br>descuento ${cupon.porcentaje}%</div>
+          <div style="border-top:4px dashed ${tinta};margin:0 0 10px;font-size:0;line-height:0">&nbsp;</div>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-            ${fila("Efecto", `<b>−${cupon.porcentaje}%</b> en tu próximo pedido de stickers o etiquetas`)}
-            ${fila("Tasa de éxito", "100%")}
-            ${fila("Usos", "1")}
-            ${fila("Vence", `<b>${esc(fechaLarga(cupon.expira))}</b>`)}
+            ${fila("Efecto", `<b style="color:${tinta}">−${cupon.porcentaje}%</b> en tu próximo pedido de stickers o etiquetas`)}
+            ${fila("Tasa de éxito", `<b style="color:${tinta}">100%</b>`)}
+            ${fila("Usos", `<b style="color:${tinta}">1</b>`)}
+            ${fila("Vence", `<b style="color:${tinta}">${esc(fechaLarga(cupon.expira))}</b>`)}
           </table>
-          <div style="margin:14px 0 4px;text-align:center;font:700 12px ${FUENTE};color:${tinta}">Tu código</div>
-          <div style="text-align:center"><span style="display:inline-block;background:#FFFFFF;border:2px dashed ${tinta};border-radius:10px;padding:8px 16px;font:800 22px 'Courier New',Courier,monospace;letter-spacing:.08em;color:${C.ink}">${esc(cupon.codigo)}</span></div>
-          <div style="text-align:center;margin:16px 0 0">${boton(urlUsarCupon(cupon.codigo), "Usar mi pergamino")}</div>
-          <div style="text-align:center;font:12px/1.4 ${FUENTE};color:${tinta};opacity:.8">Aplica sobre los productos (no envío ni RUSH). Un cupón por pedido.</div>
+          <div style="margin:14px 0 6px;text-align:center;font:700 13px ${PIXEL};color:${cafe};text-transform:uppercase;letter-spacing:.08em">Tu código</div>
+          <div style="text-align:center"><span style="display:inline-block;background:#FFFFFF;border:4px solid ${tinta};padding:8px 14px;font:900 21px ${PIXEL};letter-spacing:.06em;white-space:nowrap;color:${tinta}">${esc(cupon.codigo)}</span></div>
+          <div style="text-align:center;margin:18px 0 12px">${boton8}</div>
+          <div style="text-align:center;font:12px/1.4 ${FUENTE};color:${cafe}">Aplica sobre los productos (no envío ni RUSH). Un cupón por pedido.</div>
         </td></tr>
       </table>
-    </td></tr>
-    ${rodillo}
+      </td>
+      <td width="1%" style="width:1%;background:${tinta};font-size:0;line-height:0">&nbsp;</td>
+      <td width="3%" style="width:3%;font-size:0;line-height:0">&nbsp;</td>
+    </tr></table></td></tr>
+    ${tapa("pergamino-abajo.png")}
   </table>
 </td></tr></table>`;
 }
@@ -498,6 +510,39 @@ const CORREOS = {
   },
 };
 
+// Recordatorio: el pergamino vence pronto. No va con la plantilla de pedido
+// (sin pasos ni resumen): es un correo corto centrado en el pergamino.
+function htmlRecordatorio(p, cupon, dias) {
+  const cuando = dias <= 0 ? "vence hoy" : dias === 1 ? "vence mañana" : `vence en ${dias} días`;
+  return marcoHTML({
+    preheader: `Tu pergamino de ${cupon.porcentaje}% ${cuando}. Úsalo en tu próximo pedido.`,
+    tituloPagina: "Tu pergamino vence pronto",
+    contenido: `<h1 style="margin:0 0 6px;font:800 30px/1.05 ${FUENTE_TITULO};color:${C.ink};letter-spacing:-.02em">Tu pergamino ${cuando}${primerNombre(p) ? ", " + esc(primerNombre(p)) : ""}</h1>
+    <p style="margin:0 0 18px;font:16px/1.5 ${FUENTE};color:${C.ink}">Lo encontraste al final de tu última aventura con nosotros (pedido ${esc(p.numero)}) y todavía sigue en tu inventario. Los pergaminos no duran para siempre: úsalo antes del <b>${esc(fechaLarga(cupon.expira))}</b>.</p>
+    ${pergaminoHTML(cupon)}
+    <p style="margin:0;font:14px/1.5 ${FUENTE};color:${C.muted}">¿Ideas para la próxima? Etiquetas para tus productos, stickers para regalar o una hoja de stickers para tu marca. Si tienes dudas, escríbenos por <a href="${esc(linkWhatsAppTaller(p))}" style="color:${C.ink}">WhatsApp</a>.</p>`,
+  });
+}
+async function enviarRecordatorioCupon(pedido, cupon, dias) {
+  if (!pedido.cliente_email) return { ok: false, motivo: "sin correo" };
+  const cuando = dias <= 0 ? "vence hoy" : dias === 1 ? "vence mañana" : `vence en ${dias} días`;
+  const transportador = crearTransportador();
+  await transportador.sendMail({
+    from: { name: "Buenos Prints", address: process.env.SMTP_USER },
+    to: pedido.cliente_email,
+    replyTo: process.env.TALLER_EMAIL || process.env.SMTP_USER,
+    subject: `Tu pergamino de ${cupon.porcentaje}% ${cuando}`,
+    text: [
+      `Hola${primerNombre(pedido) ? " " + primerNombre(pedido) : ""},`, "",
+      `Tu pergamino de descuento de ${cupon.porcentaje}% ${cuando} (${fechaLarga(cupon.expira)}).`,
+      `Código: ${cupon.codigo} · Úsalo aquí: ${urlUsarCupon(cupon.codigo)}`, "",
+      "Aplica sobre los productos (no envío ni RUSH). Un cupón por pedido.", "", "— Buenos Prints",
+    ].join("\n"),
+    html: htmlRecordatorio(pedido, cupon, dias),
+  });
+  return { ok: true };
+}
+
 async function enviarCorreoCliente(pedido, clave, attachments = [], extra = {}) {
   const correo = CORREOS[clave];
   if (!correo || !pedido.cliente_email) return { ok: false, motivo: "sin plantilla o sin correo" };
@@ -534,6 +579,8 @@ module.exports = {
   enviarActualizacionAlCliente,
   enviarConfirmacionAlCliente,
   // expuestos para pruebas / vista previa
+  enviarRecordatorioCupon,
+  htmlRecordatorio,
   CORREOS,
   pasosHTML,
   htmlTaller,
