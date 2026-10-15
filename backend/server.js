@@ -26,10 +26,16 @@ app.post("/api/pedidos", async (req, res) => {
     const pedido = await crearPedido({ cliente: cliente || {}, detalle, subtotal, total });
     const pdfBuffer = await generarPDFPedido(pedido, { esFactura: false });
 
+    // El PDF se sirve desde esta misma API; el link de WhatsApp (con el
+    // mensaje y los datos de pago ya armados) se calcula ANTES de avisarle
+    // al taller, para poder incluirlo directo en ese correo.
+    const urlPdf = `${req.protocol}://${req.get("host")}/api/pedidos/${pedido.numero}/pdf`;
+    const linkWa = linkWhatsApp(pedido, urlPdf);
+
     // El correo al taller es automático y no depende de nada más.
     let correoEnviado = true;
     try {
-      await enviarCotizacionAlTaller(pedido, pdfBuffer);
+      await enviarCotizacionAlTaller(pedido, pdfBuffer, linkWa);
     } catch (err) {
       correoEnviado = false;
       console.error("No se pudo enviar el correo al taller:", err.message);
@@ -38,15 +44,12 @@ app.post("/api/pedidos", async (req, res) => {
     // El registro en Sheets es best-effort: si no está configurado, simplemente se omite.
     registrarPedidoEnSheet(pedido).catch((err) => console.error("Sheets:", err.message));
 
-    // El PDF se sirve desde esta misma API para el link de WhatsApp.
-    const urlPdf = `${req.protocol}://${req.get("host")}/api/pedidos/${pedido.numero}/pdf`;
-
     res.json({
       numero: pedido.numero,
       total: pedido.total,
       correoEnviado,
       pdfBase64: pdfBuffer.toString("base64"),
-      linkWhatsApp: linkWhatsApp(pedido, urlPdf),
+      linkWhatsApp: linkWa,
     });
   } catch (err) {
     console.error(err);
