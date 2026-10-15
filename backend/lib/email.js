@@ -115,7 +115,7 @@ function boton(href, texto, { fondo = C.accent, color = "#FFFFFF" } = {}) {
   return `<a href="${esc(href)}" style="display:inline-block;background:${fondo};color:${color};border:2px solid ${C.ink};border-radius:999px;padding:12px 22px;font:700 15px ${FUENTE};text-decoration:none;box-shadow:3px 3px 0 ${C.ink};margin:0 8px 10px 0">${texto}</a>`;
 }
 
-function resumenHTML(pedido, detalle) {
+function resumenHTML(pedido, detalle, etiqueta = "Tu pedido") {
   const items = Array.isArray(detalle.items) ? detalle.items : [];
   const filasItems = items.map((it) => {
     const medida = it.w && it.h ? ` · ${it.w}" × ${it.h}"` : "";
@@ -139,7 +139,7 @@ function resumenHTML(pedido, detalle) {
   ).join("");
 
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:18px;border-collapse:collapse">
-      <tr><td colspan="2" style="padding:0 0 4px;font:700 13px ${FUENTE};letter-spacing:.08em;text-transform:uppercase;color:${C.muted}">Tu pedido</td></tr>
+      <tr><td colspan="2" style="padding:0 0 4px;font:700 13px ${FUENTE};letter-spacing:.08em;text-transform:uppercase;color:${C.muted}">${etiqueta}</td></tr>
       ${filasItems}
     </table>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border-top:2px solid ${C.ink};margin-top:6px">
@@ -237,8 +237,6 @@ function htmlTaller(p, linkWa, nArchivos) {
   const avisos = avisosTaller(p, d);
   const cuerpo = `
     ${avisos.length ? `<div style="background:#FFF4D1;border:2px solid ${C.ink};border-radius:14px;padding:10px 14px;margin:0 0 18px;font:14.5px/1.5 ${FUENTE};color:${C.ink}">${avisos.map((a) => `<div style="padding:2px 0">${a}</div>`).join("")}</div>` : ""}
-    ${linkWa ? `<a href="${esc(linkWa)}" style="display:inline-block;background:#25D366;color:#FFFFFF;border:2px solid ${C.ink};border-radius:999px;padding:14px 24px;font:700 16px ${FUENTE};text-decoration:none;box-shadow:3px 3px 0 ${C.ink}">Abrir WhatsApp con el cliente</a>
-    <p style="margin:10px 0 0;font:13px/1.5 ${FUENTE};color:${C.muted}">Mensaje con la cotización y los datos de pago ya escrito — solo falta revisar y presionar enviar.</p>` : ""}
 
     <h2 style="margin:26px 0 6px;font:800 20px ${FUENTE_TITULO};color:${C.ink}">Cliente</h2>
     <table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:collapse">
@@ -256,9 +254,15 @@ function htmlTaller(p, linkWa, nArchivos) {
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">${disenos}</table>
     ${d.notas ? `<div style="background:${C.bg};border:2px solid ${C.ink};border-radius:14px;padding:10px 14px;margin:12px 0 0;font:14px/1.5 ${FUENTE};color:${C.ink}"><b>Notas del pedido:</b> ${esc(d.notas)}</div>` : ""}
 
-    ${resumenHTML(p, d)}
+    ${resumenHTML(p, d, "Resumen")}
 
-    <p style="margin:20px 0 0;font:13px/1.5 ${FUENTE};color:${C.muted}">Adjuntos: la cotización en PDF${nArchivos ? ` y ${nArchivos} archivo(s) de diseño que subió el cliente` : ""}.</p>`;
+    <p style="margin:20px 0 0;font:13px/1.5 ${FUENTE};color:${C.muted}">Adjuntos: la cotización en PDF${nArchivos ? ` y ${nArchivos} archivo(s) de diseño que subió el cliente` : ""}.</p>
+
+    <div style="border-top:2px solid ${C.ink};margin:22px 0 0;padding:18px 0 0">
+    <p style="margin:0 0 12px;font:700 15px/1.5 ${FUENTE};color:${C.ink}">¿Todo revisado (diseños, entrega y total)? Envía la cotización al cliente:</p>
+    ${linkWa ? `<a href="${esc(linkWa)}" style="display:inline-block;background:#25D366;color:#FFFFFF;border:2px solid ${C.ink};border-radius:999px;padding:14px 24px;font:700 16px ${FUENTE};text-decoration:none;box-shadow:3px 3px 0 ${C.ink}">Abrir WhatsApp con el cliente</a>
+    <p style="margin:10px 0 0;font:13px/1.5 ${FUENTE};color:${C.muted}">Mensaje con la cotización y los datos de pago ya escrito — solo falta revisar y presionar enviar.</p>` : ""}
+    </div>`;
 
   return marcoHTML({
     simple: true,
