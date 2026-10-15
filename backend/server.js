@@ -23,7 +23,25 @@ app.post("/api/pedidos", async (req, res) => {
       return res.status(400).json({ error: "Faltan datos del pedido (detalle, subtotal, total)." });
     }
 
-    const pedido = await crearPedido({ cliente: cliente || {}, detalle, subtotal, total });
+    // Cada item puede traer su diseño adjunto en base64 (archivo.base64,
+    // armado por el front-end cuando el cliente sube un archivo en vez de
+    // pegar un enlace). Eso NO se guarda en la base de datos (son binarios
+    // pesados que ni lib/pdf.js ni lib/sheets.js necesitan) — se separa aquí
+    // para mandarlo como adjunto en el correo al taller, y lo que sí se
+    // guarda es la versión "liviana" del detalle (sin el base64).
+    const items = Array.isArray(detalle.items) ? detalle.items : [];
+    const archivosAdjuntos = items
+      .filter((it) => it.archivo && it.archivo.base64)
+      .map((it, i) => ({
+        filename: it.archivo.nombre || it.nombreArchivo || `diseno-${i + 1}`,
+        content: Buffer.from(it.archivo.base64, "base64"),
+      }));
+    const detalleLiviano = {
+      ...detalle,
+      items: items.map(({ archivo, ...resto }) => resto),
+    };
+
+    const pedido = await crearPedido({ cliente: cliente || {}, detalle: detalleLiviano, subtotal, total });
     const pdfBuffer = await generarPDFPedido(pedido, { esFactura: false });
 
     // El PDF se sirve desde esta misma API; el link de WhatsApp (con el
@@ -35,7 +53,7 @@ app.post("/api/pedidos", async (req, res) => {
     // El correo al taller es automático y no depende de nada más.
     let correoEnviado = true;
     try {
-      await enviarCotizacionAlTaller(pedido, pdfBuffer, linkWa);
+      await enviarCotizacionAlTaller(pedido, pdfBuffer, linkWa, archivosAdjuntos);
     } catch (err) {
       correoEnviado = false;
       console.error("No se pudo enviar el correo al taller:", err.message);

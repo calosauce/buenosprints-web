@@ -27,11 +27,17 @@ function crearTransportador() {
 // dispositivo con sesión de WhatsApp (Business normal o la versión web) ve
 // la conversación con el cliente ya armada, lista para revisar y presionar
 // enviar — no se manda nada automáticamente.
-async function enviarCotizacionAlTaller(pedido, pdfBuffer, linkWhatsApp) {
+// `archivosAdjuntos` son los diseños que el cliente subió directo (no por
+// enlace de Drive/WeTransfer) — ver server.js, que los separa del resto del
+// pedido antes de guardarlo. Formato nodemailer: [{ filename, content }].
+async function enviarCotizacionAlTaller(pedido, pdfBuffer, linkWhatsApp, archivosAdjuntos = []) {
   const transportador = crearTransportador();
   const telefono = pedido.cliente_telefono || "(sin teléfono)";
   const whatsappTexto = linkWhatsApp
     ? `\n\nAbrir WhatsApp con el cliente (mensaje y datos de pago ya listos, solo falta enviar):\n${linkWhatsApp}`
+    : "";
+  const archivosTexto = archivosAdjuntos.length
+    ? `\n\nSe adjuntan ${archivosAdjuntos.length} archivo(s) de diseño que subió el cliente.`
     : "";
   await transportador.sendMail({
     from: process.env.SMTP_USER,
@@ -39,6 +45,7 @@ async function enviarCotizacionAlTaller(pedido, pdfBuffer, linkWhatsApp) {
     subject: `Nuevo pedido ${pedido.numero} — ${pedido.cliente_nombre || "cliente"}`,
     text:
       `Nuevo pedido recibido.\n\nNúmero: ${pedido.numero}\nCliente: ${pedido.cliente_nombre}\nTeléfono: ${telefono}\nTotal: RD$${(pedido.total / 100).toFixed(2)}\n\nAdjunto va el PDF con el detalle completo.` +
+      archivosTexto +
       whatsappTexto,
     html: linkWhatsApp
       ? `<p>Nuevo pedido recibido.</p>
@@ -50,7 +57,7 @@ async function enviarCotizacionAlTaller(pedido, pdfBuffer, linkWhatsApp) {
          <p><a href="${linkWhatsApp}" style="background:#25D366;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block">Abrir WhatsApp con el cliente</a><br>
          <span style="color:#666;font-size:13px">Mensaje y datos de pago ya listos — solo falta revisar y presionar enviar.</span></p>`
       : undefined,
-    attachments: [{ filename: `${pedido.numero}.pdf`, content: pdfBuffer }],
+    attachments: [{ filename: `${pedido.numero}.pdf`, content: pdfBuffer }, ...archivosAdjuntos],
   });
 }
 

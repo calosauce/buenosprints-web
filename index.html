@@ -722,6 +722,7 @@ dialog::backdrop{background:rgba(23,20,15,.55)}
     </ol>
     <div class="acts">
       <a class="btn" id="okWa" href="#" target="_blank" rel="noopener">Avisar por WhatsApp</a>
+      <a class="btn ghost" id="okPdf" href="#" hidden>Descargar cotización (PDF)</a>
       <button class="btn ghost" type="button" id="okClose">Cerrar</button>
     </div>
   </div>
@@ -732,8 +733,10 @@ dialog::backdrop{background:rgba(23,20,15,.55)}
    CONFIGURACIÓN — edita solo esta parte
    ===================================================================== */
 const CONFIG = {
-  // URL de tu Google Apps Script (ver GUIA.md). Vacío = modo demo (no envía nada).
-  ENDPOINT: "",
+  // Backend real de Buenos Prints (crea el pedido, manda el correo al taller
+  // con el PDF + link de WhatsApp listo, registra en Google Sheets). Vacío =
+  // modo demo (no envía nada, solo simula para probar la UI).
+  ENDPOINT: "https://api.buenosprints.com/api/pedidos",
   // URL opcional de un Apps Script propio que haga de proxy server-side a la consulta de RNC
   // de la DGII (https://dgii.gov.do/app/WebApps/ConsultasWeb2/ConsultasWeb/consultas/rnc.aspx).
   // La DGII no expone una API pública con CORS, así que el autocompletado de Razón Social
@@ -1363,6 +1366,13 @@ $("#form").addEventListener("submit", async e => {
   const sub = subtotalCarrito();
   const descCupon = descuentoCupon(sub);
   const costoRush = rushActivo ? calcularCostoRush(sub) : 0;
+  const total = Math.max(0, sub - descCupon) + ent.costo + costoRush;
+
+  // "payload" es lo que usa el resto del front-end (mensaje de WhatsApp al
+  // cerrar, etc.) — nombres de campo pensados para esa vista. "cuerpoApi" es
+  // lo que de verdad recibe el backend real (ver POST /api/pedidos en
+  // backend/server.js): mismos datos, con los nombres de campo que esperan
+  // lib/pdf.js y lib/sheets.js (documentado al inicio de ese último archivo).
   const payload = {
     website: f.get("website") || "",
     cliente: { nombre: f.get("nombre"), razonSocial: f.get("razonSocial"), whatsapp: f.get("whatsapp"), email: f.get("email"), rnc: f.get("rnc") },
@@ -1378,23 +1388,59 @@ $("#form").addEventListener("submit", async e => {
     })),
     cupon: cuponAplicado && descCupon > 0 ? { codigo: cuponAplicado.codigo, descuento: descCupon } : null,
     rush: rushActivo ? { horas: 24, costo: costoRush } : null,
-    subtotal: sub, descuentoCupon: descCupon, envio: ent.costo, total: Math.max(0, sub - descCupon) + ent.costo + costoRush,
+    subtotal: sub, descuentoCupon: descCupon, envio: ent.costo, total,
+  };
+
+  // El front-end calcula todo en PESOS (RD$1,500.00), pero el backend
+  // guarda los montos en CENTAVOS (enteros — ver `subtotal INT`/`total INT`
+  // en backend/lib/db.js, y money()/pesos() en lib/pdf.js y lib/sheets.js,
+  // que siempre dividen entre 100). `aCentavos` convierte justo antes de
+  // armar el cuerpo que se manda a la API; "payload" arriba se queda en
+  // pesos porque es solo para el mensaje de WhatsApp que arma el propio
+  // front-end (fmt()/fmt2()).
+  const aCentavos = (pesos) => Math.round((pesos || 0) * 100);
+
+  const cuerpoApi = {
+    cliente: { nombre: f.get("nombre"), razonSocial: f.get("razonSocial"), rnc: f.get("rnc"), telefono: f.get("whatsapp"), email: f.get("email") },
+    detalle: {
+      items: carrito.map(i => ({
+        producto: i.productoNombre, material: i.material, forma: i.forma,
+        w: +i.w.toFixed(2), h: +i.h.toFixed(2), cantidad: i.cantidad,
+        precioUnit: +i.unit.toFixed(2), precioTotal: aCentavos(i.subtotal),
+        nombreArchivo: i.nombre, enlace: i.enlace, notas: i.notas,
+        archivo: i.base64 ? { nombre: i.nombre, tipo: i.tipo, base64: i.base64 } : null,
+      })),
+      entrega: { tipo: ent.nombre, direccion: ent.direccion ? f.get("direccion") : "" },
+      fechaDeseada: f.get("fecha") || "",
+      notas: f.get("notasPedido") || "",
+      cupon: payload.cupon ? { codigo: payload.cupon.codigo, descuento: aCentavos(payload.cupon.descuento) } : null,
+      rush: payload.rush ? { horas: payload.rush.horas, costo: aCentavos(payload.rush.costo) } : null,
+      envio: aCentavos(ent.costo),
+      descuento: aCentavos(descCupon),
+    },
+    subtotal: aCentavos(sub),
+    total: aCentavos(total),
   };
 
   const btn = $("#sendBtn");
   btn.disabled = true; btn.textContent = "Subiendo archivos…";
   try {
-    let pedido, demo = false;
+    let pedido, demo = false, pdfBase64 = null;
     if (!CONFIG.ENDPOINT) {
       await new Promise(r => setTimeout(r, 900));
       pedido = "DEMO-" + Math.floor(1000 + Math.random() * 9000); demo = true;
     } else {
-      const r = await fetch(CONFIG.ENDPOINT, { method: "POST", body: JSON.stringify(payload) });
-      const o = await r.json();
-      if (!o.ok) throw new Error(o.error || "No se pudo registrar");
-      pedido = o.pedido;
+      const r = await fetch(CONFIG.ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(cuerpoApi),
+      });
+      const o = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(o.error || "No se pudo registrar el pedido");
+      pedido = o.numero;
+      pdfBase64 = o.pdfBase64 || null;
     }
-    mostrarExito(pedido, payload, demo);
+    mostrarExito(pedido, payload, demo, pdfBase64);
     carrito = []; cuponAplicado = null; rushActivo = false; $("#cuponInput").value = ""; $("#cuponMsg").hidden = true;
     form.reset(); renderEntrega(); renderCarrito();
   } catch (err) {
@@ -1435,10 +1481,21 @@ function construirMensajeWhatsApp(id, p) {
   return lineas.join("\n");
 }
 
-function mostrarExito(id, p, demo) {
+function mostrarExito(id, p, demo, pdfBase64) {
   $("#okId").textContent = id;
   $("#demoNote").innerHTML = demo ? `<div class="demo">Modo demo: el pedido no se envió. Configura ENDPOINT para recibir pedidos reales.</div>` : "";
   $("#okWa").href = waLink(construirMensajeWhatsApp(id, p));
+  const linkPdf = $("#okPdf");
+  if (linkPdf) {
+    if (pdfBase64) {
+      const blob = new Blob([Uint8Array.from(atob(pdfBase64), c => c.charCodeAt(0))], { type: "application/pdf" });
+      linkPdf.href = URL.createObjectURL(blob);
+      linkPdf.download = `${id}.pdf`;
+      linkPdf.hidden = false;
+    } else {
+      linkPdf.hidden = true;
+    }
+  }
   $("#ok").showModal();
 }
 

@@ -119,9 +119,14 @@ function generarPDFPedido(pedido, { esFactura = false } = {}) {
       doc.text(valor, xSub, yt + 3, { width: colSubW - 8, align: "right" });
       yt += 20;
     };
+    // detalle.rush llega como { horas, costo } (igual que lo espera
+    // lib/sheets.js) — se acepta también un número suelto por si alguna vez
+    // se llama a este generador con datos más simples.
+    const costoRush = detalle.rush && typeof detalle.rush === "object" ? detalle.rush.costo : detalle.rush;
+
     filaTotal("Subtotal", money(pedido.subtotal));
     if (detalle.descuento) filaTotal("Descuento", `-${money(detalle.descuento)}`);
-    if (detalle.rush) filaTotal("Servicio RUSH", money(detalle.rush));
+    if (costoRush) filaTotal("Servicio RUSH", money(costoRush));
     filaTotal("Envío", detalle.envio ? money(detalle.envio) : "Gratis");
     yt += 4;
     filaTotal(esFactura ? "TOTAL PAGADO" : "TOTAL", money(pedido.total), true);
