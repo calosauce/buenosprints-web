@@ -230,20 +230,6 @@ app.get("/api/cupones/:codigo", async (req, res) => {
   }
 });
 
-// TEMPORAL — enviar correos de prueba (entregado + recordatorio) a pedidos
-// de prueba (nombre "PRUEBA…" y correo = el del taller). Se elimina tras la prueba.
-app.post("/api/prueba/:numero/correos", async (req, res) => {
-  const actual = await obtenerPedido(req.params.numero);
-  const correoTaller = (process.env.TALLER_EMAIL || process.env.SMTP_USER || "").toLowerCase();
-  const esPrueba = actual && /^PRUEBA/i.test(actual.cliente_nombre || "") && (actual.cliente_email || "").toLowerCase() === correoTaller;
-  if (!esPrueba) return res.status(404).json({ error: "Solo pedidos de prueba." });
-  const pedido = await actualizarEstado(actual.numero, "entregado");
-  const cupon = await cuponParaPedido(pedido.numero);
-  const r1 = await enviarActualizacionAlCliente(pedido, "entregado", { cupon });
-  const r2 = await enviarRecordatorioCupon(pedido, cupon, diasEntre(hoyRD(), cupon.expira) > 5 ? 5 : diasEntre(hoyRD(), cupon.expira));
-  res.json({ ok: true, cupon: { codigo: cupon.codigo, expira: cupon.expira }, entregado: r1.ok, recordatorio: r2.ok });
-});
-
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
 // Recordatorio automático: cada hora busca pergaminos sin usar que vencen en
