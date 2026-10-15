@@ -182,7 +182,11 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;backgroun
 .ptabs button.on{background:var(--ink);color:var(--paper)}
 .bgrid{display:grid;gap:28px;margin-top:24px}
 @media(min-width:900px){.bgrid{grid-template-columns:1.2fr .95fr}}
-@media(max-width:899px){.side{order:-1}.stage{height:220px}}
+/* En móvil el resumen (vista previa + precio + "Agregar al pedido") va DESPUÉS
+   de los 6 pasos: arriba confundía, porque mostraba un precio y un botón antes
+   de que el cliente eligiera nada. La barra fija de abajo (.mbar) sigue
+   mostrando el total mientras recorre los pasos. */
+@media(max-width:899px){.stage{height:220px}}
 .steps{min-width:0;background:var(--paper);border:2px solid var(--ink);border-radius:22px;padding:22px}
 .stepsprog{position:sticky;top:calc(env(safe-area-inset-top,0px) + 106px);z-index:5;background:var(--paper);padding-bottom:12px;margin-bottom:10px}
 .stepsprog-bars{display:flex;gap:5px}
