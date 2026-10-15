@@ -137,7 +137,15 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;backgroun
 .hs{position:absolute;filter:drop-shadow(0 10px 12px rgba(23,20,15,.28));animation:float 6s ease-in-out infinite}
 /* Doblez de "sticker despegándose": la cara se recorta en diagonal y la
    solapa (el reverso del papel) se refleja sobre esa línea. */
+.hs-pliegue{display:block;position:relative;--p:1;--c:calc(var(--cmax) - var(--prof) * var(--p))}
 .hs-cara{display:block}
+/* Animación: se despega, se queda un momento arriba, y se vuelve a pegar.
+   Solo se activa si el navegador puede animar --p de forma suave
+   (html.pliegue-anim, puesto por JS con CSS.registerProperty); si no, el
+   sticker queda quieto con la esquina levantada. */
+@keyframes despegar{0%,22%{--p:0}45%,70%{--p:1}92%,100%{--p:0}}
+html.pliegue-anim .hs-pliegue{animation:despegar 5.2s cubic-bezier(.45,0,.25,1) infinite}
+@media(prefers-reduced-motion:reduce){html.pliegue-anim .hs-pliegue{animation:none}}
 .hs-solapa{position:absolute;inset:0;transform-origin:0 0;pointer-events:none}
 .hs-solapa i{position:absolute;inset:0;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
 .hs svg,.hs img{width:100%;height:100%;display:block;object-fit:contain}
@@ -1048,36 +1056,62 @@ function aspecto(svg) {
   const [, , w, h] = m[1].split(/\s+/).map(Number);
   return w / h;
 }
+// Coordenadas del recorte en la esquina "br" (abajo-derecha), en función de
+// la posición del doblez c: "C" = (c - 1). Para las otras esquinas se espeja.
+// La cara es el cuadrado sin el triángulo de la esquina; la solapa es ese
+// triángulo. Todo queda escrito con var(--c) para poder animarlo.
+function poligono(puntos, s1, s2) {
+  const val = (e, espejo) => {
+    // e: 0, 1 o "C" (= c - 1). Espejado: 1 - e.
+    if (e === "C") return espejo ? "calc((2 - var(--c)) * 100%)" : "calc((var(--c) - 1) * 100%)";
+    return `${(espejo ? 1 - e : e) * 100}%`;
+  };
+  return `polygon(${puntos.map(([u, v]) => `${val(u, s1 < 0)} ${val(v, s2 < 0)}`).join(",")})`;
+}
+const CARA = [[0, 0], [1, 0], [1, "C"], ["C", 1], [0, 1]];
+const SOLAPA = [[1, "C"], [1, 1], ["C", 1]];
 // Devuelve el interior de un .hs: la cara recortada + la solapa reflejada.
-function stickerHTML(svgOriginal, pliegue) {
+function stickerHTML(svgOriginal, pliegue, i = 0) {
   const svg = conBorde(svgOriginal);
   if (!pliegue) return `<span class="hs-cara">${svg}</span>`;
-  const [s1, s2] = ESQUINAS[pliegue.esquina], c = pliegue.c, k = (s1 < 0 ? 1 : 0) + (s2 < 0 ? 1 : 0);
+  const [s1, s2] = ESQUINAS[pliegue.esquina], k = (s1 < 0 ? 1 : 0) + (s2 < 0 ? 1 : 0);
   const r = aspecto(svg), q = 1 + r * r;
-  // Reflexión sobre la línea s1*x/w + s2*y/h + k = c (en px), escrita con
-  // translate(%) para que no dependa del tamaño en pantalla, solo del aspecto.
+  // Reflexión sobre la línea del doblez (s1*x/w + s2*y/h + k = c). La parte
+  // lineal depende solo del aspecto; el desplazamiento depende de c, así que
+  // va con var(--c) y se mueve junto con la animación.
   const a = 1 - 2 / q, d = 1 - 2 * r * r / q, b = -2 * s1 * s2 * r / q;
-  const tx = 2 * (c - k) * s1 / q * 100, ty = 2 * (c - k) * s2 * r * r / q * 100;
+  const fx = (2 * s1 / q * 100).toFixed(4), fy = (2 * s2 * r * r / q * 100).toFixed(4);
+  const tx = `calc((var(--c) - ${k}) * ${fx}%)`, ty = `calc((var(--c) - ${k}) * ${fy}%)`;
   const mascara = `url('data:image/svg+xml,${encodeURIComponent(svg).replace(/'/g, "%27")}')`;
   const sombra = `drop-shadow(${-s1 * 2}px ${-s2 * 2}px 2.5px rgba(23,20,15,.32))`;
   const fondo = `linear-gradient(${s2 > 0 ? (s1 > 0 ? 315 : 45) : (s1 > 0 ? 225 : 135)}deg,#FFFFFF 0%,#F4EFE6 55%,#DDD5C7 100%)`;
-  return `<span class="hs-cara" style="clip-path:${recorteUnitario(s1, s2, c, false)}">${svg}</span>` +
-    `<span class="hs-solapa" style="transform:translate(${tx.toFixed(3)}%,${ty.toFixed(3)}%) matrix(${a.toFixed(5)},${b.toFixed(5)},${b.toFixed(5)},${d.toFixed(5)},0,0);filter:${sombra}">` +
-    `<i style="clip-path:${recorteUnitario(s1, s2, c, true)};-webkit-mask-image:${mascara};mask-image:${mascara};background:${fondo}"></i></span>`;
+  // --cmax: línea justo en el borde de la silueta (sticker pegado del todo).
+  // --prof: cuánto se levanta como máximo. --p (0 a 1) se anima en CSS.
+  const prof = (pliegue.cmax - pliegue.c).toFixed(3);
+  return `<span class="hs-pliegue" style="--cmax:${pliegue.cmax};--prof:${prof};animation-delay:${(-i * 1.3).toFixed(1)}s">` +
+    `<span class="hs-cara" style="clip-path:${poligono(CARA, s1, s2)}">${svg}</span>` +
+    `<span class="hs-solapa" style="transform:translate(${tx},${ty}) matrix(${a.toFixed(5)},${b.toFixed(5)},${b.toFixed(5)},${d.toFixed(5)},0,0);filter:${sombra}">` +
+    `<i style="clip-path:${poligono(SOLAPA, s1, s2)};-webkit-mask-image:${mascara};mask-image:${mascara};background:${fondo}"></i></span></span>`;
 }
-const PLIEGUE_DEMO = [{ esquina: "br", c: 1.517 }, { esquina: "tr", c: 1.676 }, { esquina: "tl", c: 1.547 }, { esquina: "tl", c: 1.675 }, { esquina: "br", c: 1.46 }];
-const PLIEGUE_MINI = { stickers: [PLIEGUE_DEMO[0], PLIEGUE_DEMO[1]], etiquetas: [{ esquina: "br", c: 1.493 }, { esquina: "tr", c: 1.711 }], muestras: [PLIEGUE_DEMO[3], PLIEGUE_DEMO[2]], hojas: [{ esquina: "br", c: 1.653 }, { esquina: "tr", c: 1.684 }] };
+const PLIEGUE_DEMO = [{ esquina: "br", c: 1.517, cmax: 1.667 }, { esquina: "tr", c: 1.676, cmax: 1.826 }, { esquina: "tl", c: 1.547, cmax: 1.647 }, { esquina: "tl", c: 1.675, cmax: 1.825 }, { esquina: "br", c: 1.46, cmax: 1.61 }];
+const PLIEGUE_MINI = { stickers: [PLIEGUE_DEMO[0], PLIEGUE_DEMO[1]], etiquetas: [{ esquina: "br", c: 1.493, cmax: 1.643 }, { esquina: "tr", c: 1.711, cmax: 1.861 }], muestras: [PLIEGUE_DEMO[3], PLIEGUE_DEMO[2]], hojas: [{ esquina: "br", c: 1.653, cmax: 1.803 }, { esquina: "tr", c: 1.684, cmax: 1.834 }] };
 
+try {
+  if (window.CSS && CSS.registerProperty) {
+    CSS.registerProperty({ name: "--p", syntax: "<number>", inherits: true, initialValue: "1" });
+    document.documentElement.classList.add("pliegue-anim");
+  }
+} catch (e) { /* ya registrada o no soportado: queda estático */ }
 function renderCollage() {
   // Fotos propias (HERO_STICKERS) se muestran tal cual: ya traen su borde real.
   const src = CONFIG.HERO_STICKERS.length
     ? CONFIG.HERO_STICKERS.slice(0, 5).map(u => `<img src="${esc(u)}" alt="">`)
-    : DEMO.map((svg, i) => stickerHTML(svg, PLIEGUE_DEMO[i]));
+    : DEMO.map((svg, i) => stickerHTML(svg, PLIEGUE_DEMO[i], i));
   $("#collage").innerHTML = src.map(s => `<div class="hs">${s}</div>`).join("");
   $$("[data-art]").forEach(el => {
     const [a, b] = MINI[el.dataset.art];
     const [pa, pb] = PLIEGUE_MINI[el.dataset.art] || [];
-    el.innerHTML = `<div class="hs" style="position:absolute;width:42%;left:12%;top:16%;--r:-8deg;animation:none;transform:rotate(-8deg)">${stickerHTML(a, pa)}</div><div class="hs" style="position:absolute;width:40%;right:10%;top:28%;--r:7deg;animation:none;transform:rotate(7deg)">${stickerHTML(b, pb)}</div>`;
+    el.innerHTML = `<div class="hs" style="position:absolute;width:42%;left:12%;top:16%;--r:-8deg;animation:none;transform:rotate(-8deg)">${stickerHTML(a, pa, 0)}</div><div class="hs" style="position:absolute;width:40%;right:10%;top:28%;--r:7deg;animation:none;transform:rotate(7deg)">${stickerHTML(b, pb, 2)}</div>`;
   });
   if (CONFIG.TRABAJOS.length) {
     $("#trabajos").hidden = false;

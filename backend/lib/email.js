@@ -32,31 +32,14 @@ function crearTransportador() {
 // pedido antes de guardarlo. Formato nodemailer: [{ filename, content }].
 async function enviarCotizacionAlTaller(pedido, pdfBuffer, linkWhatsApp, archivosAdjuntos = []) {
   const transportador = crearTransportador();
-  const telefono = pedido.cliente_telefono || "(sin teléfono)";
-  const whatsappTexto = linkWhatsApp
-    ? `\n\nAbrir WhatsApp con el cliente (mensaje y datos de pago ya listos, solo falta enviar):\n${linkWhatsApp}`
-    : "";
-  const archivosTexto = archivosAdjuntos.length
-    ? `\n\nSe adjuntan ${archivosAdjuntos.length} archivo(s) de diseño que subió el cliente.`
-    : "";
   await transportador.sendMail({
-    from: process.env.SMTP_USER,
+    from: { name: "Buenos Prints — Pedidos", address: process.env.SMTP_USER },
     to: process.env.TALLER_EMAIL || process.env.SMTP_USER,
+    // Responder este correo le escribe directo al cliente (si dejó correo).
+    replyTo: pedido.cliente_email || undefined,
     subject: `Nuevo pedido ${pedido.numero} — ${pedido.cliente_nombre || "cliente"}`,
-    text:
-      `Nuevo pedido recibido.\n\nNúmero: ${pedido.numero}\nCliente: ${pedido.cliente_nombre}\nTeléfono: ${telefono}\nTotal: RD$${(pedido.total / 100).toFixed(2)}\n\nAdjunto va el PDF con el detalle completo.` +
-      archivosTexto +
-      whatsappTexto,
-    html: linkWhatsApp
-      ? `<p>Nuevo pedido recibido.</p>
-         <p><b>Número:</b> ${pedido.numero}<br>
-         <b>Cliente:</b> ${pedido.cliente_nombre || ""}<br>
-         <b>Teléfono:</b> ${telefono}<br>
-         <b>Total:</b> RD$${(pedido.total / 100).toFixed(2)}</p>
-         <p>Adjunto va el PDF con el detalle completo.</p>
-         <p><a href="${linkWhatsApp}" style="background:#25D366;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block">Abrir WhatsApp con el cliente</a><br>
-         <span style="color:#666;font-size:13px">Mensaje y datos de pago ya listos — solo falta revisar y presionar enviar.</span></p>`
-      : undefined,
+    text: textoTaller(pedido, linkWhatsApp, archivosAdjuntos.length),
+    html: htmlTaller(pedido, linkWhatsApp, archivosAdjuntos.length),
     attachments: [{ filename: `${pedido.numero}.pdf`, content: pdfBuffer }, ...archivosAdjuntos],
   });
 }
@@ -167,11 +150,91 @@ function resumenHTML(pedido, detalle) {
 
 // Plantilla común. `pasoActual` = índice 0-3, o null para no mostrar pasos
 // (cancelado). `aviso` = recuadro rojo opcional (cancelado).
-function plantillaHTML(pedido, { preheader, titulo, intro, pasoActual, aviso, cuerpo, nota }) {
-  const linkRastreo = urlRastreo(pedido);
-  const detalle = leerDetalle(pedido);
+// Correo INTERNO para el taller: mismo diseño que los del cliente, pero
+// pensado para trabajar el pedido: botón de WhatsApp arriba, todos los datos
+// de contacto y entrega, los enlaces/notas de cada diseño y el resumen.
+function filaDato(k, v) {
+  if (!v) return "";
+  return `<tr><td valign="top" style="padding:6px 12px 6px 0;font:14px ${FUENTE};color:${C.muted};white-space:nowrap">${esc(k)}</td><td style="padding:6px 0;font:15px/1.4 ${FUENTE};color:${C.ink}">${v}</td></tr>`;
+}
+function textoTaller(p, linkWa, nArchivos) {
+  const d = leerDetalle(p);
+  const items = Array.isArray(d.items) ? d.items : [];
+  return [
+    `Nuevo pedido ${p.numero}`, "",
+    `Cliente: ${p.cliente_nombre || "-"}`,
+    p.cliente_razon_social ? `Razón social: ${p.cliente_razon_social}` : null,
+    p.cliente_rnc ? `RNC: ${p.cliente_rnc}` : null,
+    `WhatsApp: ${p.cliente_telefono || "-"}`,
+    `Correo: ${p.cliente_email || "-"}`,
+    `Entrega: ${d.entrega?.tipo || "-"}${d.entrega?.direccion ? " — " + d.entrega.direccion : ""}`,
+    d.fechaDeseada ? `Fecha deseada: ${d.fechaDeseada}` : null,
+    d.rush ? "RUSH: sí (24h)" : null,
+    "", "Diseños:",
+    ...items.map((it, i) => `${i + 1}. ${it.producto || "Producto"} · ${it.cantidad || 0} unds${it.w && it.h ? ` · ${it.w}" × ${it.h}"` : ""}${it.material ? " · " + it.material : ""}${it.forma ? " · " + it.forma : ""}` +
+      (it.enlace ? `\n   Enlace: ${it.enlace}` : it.nombreArchivo ? `\n   Archivo adjunto: ${it.nombreArchivo}` : "") + (it.notas ? `\n   Notas: ${it.notas}` : "")),
+    d.notas ? `\nNotas del pedido: ${d.notas}` : null,
+    "", `Total: ${rd(p.total)}`,
+    `Adjuntos: PDF de cotización${nArchivos ? ` + ${nArchivos} archivo(s) de diseño` : ""}.`,
+    linkWa ? `\nAbrir WhatsApp con el cliente (mensaje y datos de pago ya listos):\n${linkWa}` : null,
+  ].filter((x) => x !== null).join("\n");
+}
+function htmlTaller(p, linkWa, nArchivos) {
+  const d = leerDetalle(p);
+  const items = Array.isArray(d.items) ? d.items : [];
+  const tel = p.cliente_telefono ? `<a href="tel:${esc(String(p.cliente_telefono).replace(/[^\d+]/g, ""))}" style="color:${C.ink}">${esc(p.cliente_telefono)}</a>` : "";
+  const correo = p.cliente_email ? `<a href="mailto:${esc(p.cliente_email)}" style="color:${C.ink}">${esc(p.cliente_email)}</a>` : "<span style=\"color:" + C.muted + "\">(no dejó correo)</span>";
+  const entrega = d.entrega?.tipo ? esc(d.entrega.tipo) + (d.entrega.direccion ? `<br><span style="color:${C.muted}">${esc(d.entrega.direccion)}</span>` : "") : "";
+  const disenos = items.map((it, i) => {
+    const medida = it.w && it.h ? ` · ${it.w}" × ${it.h}"` : "";
+    const extra = [it.material, it.forma].filter(Boolean).join(" · ");
+    const archivo = it.enlace
+      ? `<a href="${esc(it.enlace)}" style="color:${C.ink};font-weight:700">Abrir enlace del diseño</a>`
+      : it.nombreArchivo ? `Archivo adjunto: <b>${esc(it.nombreArchivo)}</b>` : `<span style="color:${C.accent};font-weight:700">Sin diseño todavía</span>`;
+    return `<tr><td style="padding:10px 0;border-top:1px dashed ${C.line};font:15px/1.45 ${FUENTE};color:${C.ink}">
+      <b>${i + 1}. ${esc(it.producto || "Producto")}</b> <span style="color:${C.muted}">— ${esc(Number(it.cantidad || 0).toLocaleString("es-DO"))} unds${esc(medida)}${extra ? " · " + esc(extra) : ""}</span><br>
+      ${archivo}${it.notas ? `<br><span style="color:${C.muted}">Notas:</span> ${esc(it.notas)}` : ""}
+    </td></tr>`;
+  }).join("");
+
+  const cuerpo = `
+    ${linkWa ? `<a href="${esc(linkWa)}" style="display:inline-block;background:#25D366;color:#FFFFFF;border:2px solid ${C.ink};border-radius:999px;padding:14px 24px;font:700 16px ${FUENTE};text-decoration:none;box-shadow:3px 3px 0 ${C.ink}">Abrir WhatsApp con el cliente</a>
+    <p style="margin:10px 0 0;font:13px/1.5 ${FUENTE};color:${C.muted}">Mensaje con la cotización y los datos de pago ya escrito — solo falta revisar y presionar enviar.</p>` : ""}
+
+    <h2 style="margin:26px 0 6px;font:800 20px ${FUENTE_TITULO};color:${C.ink}">Cliente</h2>
+    <table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:collapse">
+      ${filaDato("Nombre", esc(p.cliente_nombre || "-"))}
+      ${filaDato("Razón social", esc(p.cliente_razon_social || ""))}
+      ${filaDato("RNC", esc(p.cliente_rnc || ""))}
+      ${filaDato("WhatsApp", tel)}
+      ${filaDato("Correo", correo)}
+      ${filaDato("Entrega", entrega)}
+      ${filaDato("Fecha deseada", esc(d.fechaDeseada || ""))}
+      ${filaDato("RUSH", d.rush ? `<b style="color:${C.accent}">Sí — entrega en 24h</b>` : "")}
+    </table>
+
+    <h2 style="margin:22px 0 6px;font:800 20px ${FUENTE_TITULO};color:${C.ink}">Diseños</h2>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">${disenos}</table>
+    ${d.notas ? `<div style="background:${C.bg};border:2px solid ${C.ink};border-radius:14px;padding:10px 14px;margin:12px 0 0;font:14px/1.5 ${FUENTE};color:${C.ink}"><b>Notas del pedido:</b> ${esc(d.notas)}</div>` : ""}
+
+    ${resumenHTML(p, d)}
+
+    <p style="margin:20px 0 0;font:13px/1.5 ${FUENTE};color:${C.muted}">Adjuntos: la cotización en PDF${nArchivos ? ` y ${nArchivos} archivo(s) de diseño que subió el cliente` : ""}.</p>`;
+
+  return marcoHTML({
+    preheader: `${p.cliente_nombre || "Cliente"} · ${rd(p.total)} · ${items.length} diseño(s)`,
+    tituloPagina: `Nuevo pedido ${p.numero}`,
+    contenido: `<h1 style="margin:0 0 6px;font:800 30px/1.05 ${FUENTE_TITULO};color:${C.ink};letter-spacing:-.02em">Nuevo pedido</h1>
+    <p style="margin:0 0 6px;font:16px/1.5 ${FUENTE};color:${C.ink}">de <b>${esc(p.cliente_nombre || "cliente")}</b> por <b>${rd(p.total)}</b></p>
+    <div style="display:inline-block;background:${C.sun};border:2px solid ${C.ink};border-radius:999px;padding:4px 16px;font:800 20px ${FUENTE};color:${C.ink};margin:0 0 20px">${esc(p.numero)}</div><br>
+    ${cuerpo}`,
+  });
+}
+
+// Header rojo con el logo + tarjeta blanca + pie. Compartido por todos.
+function marcoHTML({ preheader, tituloPagina, contenido }) {
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="color-scheme" content="light"><title>Pedido ${esc(pedido.numero)}</title></head>
+<meta name="color-scheme" content="light"><title>${esc(tituloPagina)}</title></head>
 <body style="margin:0;padding:0;background:${C.bg}">
 <div style="display:none;max-height:0;overflow:hidden">${esc(preheader)}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.bg}"><tr><td align="center" style="padding:24px 12px">
@@ -182,7 +245,24 @@ function plantillaHTML(pedido, { preheader, titulo, intro, pasoActual, aviso, cu
   </td></tr>
 
   <tr><td style="background:${C.paper};border:2px solid ${C.ink};border-top:0;border-radius:0 0 22px 22px;padding:26px 24px">
-    <h1 style="margin:0 0 6px;font:800 30px/1.05 ${FUENTE_TITULO};color:${C.ink};letter-spacing:-.02em">${titulo}</h1>
+    ${contenido}
+  </td></tr>
+
+  <tr><td align="center" style="padding:18px 8px;font:12px/1.5 ${FUENTE};color:${C.muted}">
+    Buenos Prints · Stickers y etiquetas personalizadas · Santo Domingo, RD<br>WhatsApp 849-577-9893 · buenosprints.taller@gmail.com
+  </td></tr>
+</table>
+</td></tr></table>
+</body></html>`;
+}
+
+function plantillaHTML(pedido, { preheader, titulo, intro, pasoActual, aviso, cuerpo, nota }) {
+  const linkRastreo = urlRastreo(pedido);
+  const detalle = leerDetalle(pedido);
+  return marcoHTML({
+    preheader,
+    tituloPagina: `Pedido ${pedido.numero}`,
+    contenido: `<h1 style="margin:0 0 6px;font:800 30px/1.05 ${FUENTE_TITULO};color:${C.ink};letter-spacing:-.02em">${titulo}</h1>
     <p style="margin:0 0 6px;font:16px/1.5 ${FUENTE};color:${C.ink}">${intro}</p>
     <div style="display:inline-block;background:${C.sun};border:2px solid ${C.ink};border-radius:999px;padding:4px 16px;font:800 20px ${FUENTE};color:${C.ink};margin:0 0 22px">${esc(pedido.numero)}</div>
 
@@ -196,15 +276,8 @@ function plantillaHTML(pedido, { preheader, titulo, intro, pasoActual, aviso, cu
 
     ${resumenHTML(pedido, detalle)}
 
-    <p style="margin:20px 0 0;font:13px/1.5 ${FUENTE};color:${C.muted}">${nota || ""}Para seguir tu pedido en cualquier momento entra a <a href="${esc(linkRastreo)}" style="color:${C.ink}">buenosprints.com/rastreo</a> con tu número de pedido y los últimos 4 dígitos de tu WhatsApp.</p>
-  </td></tr>
-
-  <tr><td align="center" style="padding:18px 8px;font:12px/1.5 ${FUENTE};color:${C.muted}">
-    Buenos Prints · Stickers y etiquetas personalizadas · Santo Domingo, RD<br>WhatsApp 849-577-9893 · buenosprints.taller@gmail.com
-  </td></tr>
-</table>
-</td></tr></table>
-</body></html>`;
+    <p style="margin:20px 0 0;font:13px/1.5 ${FUENTE};color:${C.muted}">${nota || ""}Para seguir tu pedido en cualquier momento entra a <a href="${esc(linkRastreo)}" style="color:${C.ink}">buenosprints.com/rastreo</a> con tu número de pedido y los últimos 4 dígitos de tu WhatsApp.</p>`,
+  });
 }
 
 const h2 = (t) => `<h2 style="margin:26px 0 8px;font:800 20px ${FUENTE_TITULO};color:${C.ink}">${t}</h2>`;
@@ -341,4 +414,5 @@ module.exports = {
   // expuestos para pruebas / vista previa
   CORREOS,
   pasosHTML,
+  htmlTaller,
 };
