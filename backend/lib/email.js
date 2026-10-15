@@ -37,7 +37,7 @@ async function enviarCotizacionAlTaller(pedido, pdfBuffer, linkWhatsApp, archivo
     to: process.env.TALLER_EMAIL || process.env.SMTP_USER,
     // Responder este correo le escribe directo al cliente (si dejó correo).
     replyTo: pedido.cliente_email || undefined,
-    subject: `Nuevo pedido ${pedido.numero} — ${pedido.cliente_nombre || "cliente"}`,
+    subject: asuntoTaller(pedido),
     text: textoTaller(pedido, linkWhatsApp, archivosAdjuntos.length),
     html: htmlTaller(pedido, linkWhatsApp, archivosAdjuntos.length),
     attachments: [{ filename: `${pedido.numero}.pdf`, content: pdfBuffer }, ...archivosAdjuntos],
@@ -160,8 +160,10 @@ function filaDato(k, v) {
 function textoTaller(p, linkWa, nArchivos) {
   const d = leerDetalle(p);
   const items = Array.isArray(d.items) ? d.items : [];
+  const avisos = avisosTaller(p, d).map((a) => "• " + a.replace(/<[^>]+>/g, ""));
   return [
     `Nuevo pedido ${p.numero}`, "",
+    ...(avisos.length ? ["ATENCIÓN:", ...avisos, ""] : []),
     `Cliente: ${p.cliente_nombre || "-"}`,
     p.cliente_razon_social ? `Razón social: ${p.cliente_razon_social}` : null,
     p.cliente_rnc ? `RNC: ${p.cliente_rnc}` : null,
@@ -179,6 +181,41 @@ function textoTaller(p, linkWa, nArchivos) {
     linkWa ? `\nAbrir WhatsApp con el cliente (mensaje y datos de pago ya listos):\n${linkWa}` : null,
   ].filter((x) => x !== null).join("\n");
 }
+// Asunto pensado para decidir desde la bandeja sin abrir el correo:
+// "⚡ RUSH · BP-2026-000722 · RD$4,707.00 · María Pérez" (la etiqueta RUSH
+// solo cuando aplica).
+function asuntoTaller(p) {
+  const rush = leerDetalle(p).rush ? "⚡ RUSH · " : "";
+  return `${rush}${p.numero} · ${rd(p.total)} · ${p.cliente_nombre || "Cliente"}`;
+}
+
+// Días desde hoy (hora de Santo Domingo, UTC-4 todo el año) hasta una fecha
+// "AAAA-MM-DD". null si no hay fecha o no se entiende.
+function diasHasta(fechaISO) {
+  const m = String(fechaISO || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return null;
+  const ahoraRD = new Date(Date.now() - 4 * 3600 * 1000);
+  const hoy = Date.UTC(ahoraRD.getUTCFullYear(), ahoraRD.getUTCMonth(), ahoraRD.getUTCDate());
+  return Math.round((Date.UTC(+m[1], +m[2] - 1, +m[3]) - hoy) / 86400000);
+}
+
+// Avisos que necesitan atención. Solo aparecen cuando aplican; si no hay
+// ninguno, el correo no muestra el recuadro.
+function avisosTaller(p, d) {
+  const items = Array.isArray(d.items) ? d.items : [];
+  const avisos = [];
+  if (d.rush) avisos.push("<b>RUSH:</b> entrega en 24 horas luego de aprobar la prueba.");
+  const dias = diasHasta(d.fechaDeseada);
+  if (dias !== null && dias <= 3) {
+    const cuando = dias < 0 ? "ya pasó" : dias === 0 ? "es hoy" : dias === 1 ? "es mañana" : `es en ${dias} días`;
+    avisos.push(`<b>Fecha deseada cercana:</b> ${esc(d.fechaDeseada)} (${cuando}).`);
+  }
+  const sinDiseno = items.map((it, i) => (!it.enlace && !it.nombreArchivo ? i + 1 : null)).filter(Boolean);
+  if (sinDiseno.length) avisos.push(`<b>Sin diseño:</b> ${sinDiseno.length === 1 ? "el diseño" : "los diseños"} ${sinDiseno.join(", ")} no ${sinDiseno.length === 1 ? "trae" : "traen"} archivo ni enlace.`);
+  if (!p.cliente_email) avisos.push("<b>Sin correo:</b> el cliente no recibe confirmación ni avisos por correo — todo va por WhatsApp.");
+  return avisos;
+}
+
 function htmlTaller(p, linkWa, nArchivos) {
   const d = leerDetalle(p);
   const items = Array.isArray(d.items) ? d.items : [];
@@ -197,7 +234,9 @@ function htmlTaller(p, linkWa, nArchivos) {
     </td></tr>`;
   }).join("");
 
+  const avisos = avisosTaller(p, d);
   const cuerpo = `
+    ${avisos.length ? `<div style="background:#FFF4D1;border:2px solid ${C.ink};border-radius:14px;padding:10px 14px;margin:0 0 18px;font:14.5px/1.5 ${FUENTE};color:${C.ink}">${avisos.map((a) => `<div style="padding:2px 0">${a}</div>`).join("")}</div>` : ""}
     ${linkWa ? `<a href="${esc(linkWa)}" style="display:inline-block;background:#25D366;color:#FFFFFF;border:2px solid ${C.ink};border-radius:999px;padding:14px 24px;font:700 16px ${FUENTE};text-decoration:none;box-shadow:3px 3px 0 ${C.ink}">Abrir WhatsApp con el cliente</a>
     <p style="margin:10px 0 0;font:13px/1.5 ${FUENTE};color:${C.muted}">Mensaje con la cotización y los datos de pago ya escrito — solo falta revisar y presionar enviar.</p>` : ""}
 
@@ -222,9 +261,10 @@ function htmlTaller(p, linkWa, nArchivos) {
     <p style="margin:20px 0 0;font:13px/1.5 ${FUENTE};color:${C.muted}">Adjuntos: la cotización en PDF${nArchivos ? ` y ${nArchivos} archivo(s) de diseño que subió el cliente` : ""}.</p>`;
 
   return marcoHTML({
-    preheader: `${p.cliente_nombre || "Cliente"} · ${rd(p.total)} · ${items.length} diseño(s)`,
+    compacto: true,
+    preheader: `${p.cliente_nombre || "Cliente"} · ${rd(p.total)} · ${items.length} diseño(s)${avisos.length ? " · revisar avisos" : ""}`,
     tituloPagina: `Nuevo pedido ${p.numero}`,
-    contenido: `<h1 style="margin:0 0 6px;font:800 30px/1.05 ${FUENTE_TITULO};color:${C.ink};letter-spacing:-.02em">Nuevo pedido</h1>
+    contenido: `<h1 style="margin:0 0 4px;font:800 24px/1.1 ${FUENTE_TITULO};color:${C.ink};letter-spacing:-.02em">Nuevo pedido</h1>
     <p style="margin:0 0 6px;font:16px/1.5 ${FUENTE};color:${C.ink}">de <b>${esc(p.cliente_nombre || "cliente")}</b> por <b>${rd(p.total)}</b></p>
     <div style="display:inline-block;background:${C.sun};border:2px solid ${C.ink};border-radius:999px;padding:4px 16px;font:800 20px ${FUENTE};color:${C.ink};margin:0 0 20px">${esc(p.numero)}</div><br>
     ${cuerpo}`,
@@ -232,7 +272,10 @@ function htmlTaller(p, linkWa, nArchivos) {
 }
 
 // Header rojo con el logo + tarjeta blanca + pie. Compartido por todos.
-function marcoHTML({ preheader, tituloPagina, contenido }) {
+function marcoHTML({ preheader, tituloPagina, contenido, compacto = false }) {
+  // compacto (correo del taller): franja y logo más bajos para que la
+  // información y el botón de WhatsApp queden visibles sin bajar.
+  const padCab = compacto ? "9px 18px" : "16px 22px", anchoLogo = compacto ? 120 : 200;
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light"><title>${esc(tituloPagina)}</title></head>
 <body style="margin:0;padding:0;background:${C.bg}">
@@ -240,8 +283,8 @@ function marcoHTML({ preheader, tituloPagina, contenido }) {
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.bg}"><tr><td align="center" style="padding:24px 12px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px">
 
-  <tr><td align="center" style="background:${C.accent};border:2px solid ${C.ink};border-radius:22px 22px 0 0;padding:16px 22px;text-align:center">
-    <a href="https://buenosprints.com" style="text-decoration:none;display:inline-block"><img src="${URL_LOGO}" width="200" height="50" alt="Buenos Prints" style="display:block;margin:0 auto;border:0;width:200px;height:auto;max-width:100%;font:800 24px ${FUENTE_TITULO};color:#FFFFFF"></a>
+  <tr><td align="center" style="background:${C.accent};border:2px solid ${C.ink};border-radius:22px 22px 0 0;padding:${padCab};text-align:center">
+    <a href="https://buenosprints.com" style="text-decoration:none;display:inline-block"><img src="${URL_LOGO}" width="${anchoLogo}" height="${Math.round(anchoLogo / 4)}" alt="Buenos Prints" style="display:block;margin:0 auto;border:0;width:${anchoLogo}px;height:auto;max-width:100%;font:800 24px ${FUENTE_TITULO};color:#FFFFFF"></a>
   </td></tr>
 
   <tr><td style="background:${C.paper};border:2px solid ${C.ink};border-top:0;border-radius:0 0 22px 22px;padding:26px 24px">
@@ -415,4 +458,5 @@ module.exports = {
   CORREOS,
   pasosHTML,
   htmlTaller,
+  asuntoTaller,
 };
