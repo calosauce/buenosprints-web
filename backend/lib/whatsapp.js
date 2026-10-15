@@ -16,8 +16,22 @@ const DATOS_TRANSFERENCIA =
   `▪️BHD\n16054610023\nCuenta corriente\nCarlos Cornielle\nCed.: 402-2010529-6\n\n` +
   `🔹Ban Reservas\n9603050148\nCuenta de ahorros\nLesbia Camila Chávez\nCed: 402-2045802-6`;
 
+// El campo "WhatsApp" del formulario pide el número tal cual se marca en el
+// país (ej. "809 000 0000", placeholder sin código de país) — así que llega
+// aquí como 10 dígitos. wa.me necesita el número completo CON código de
+// país (1, el mismo de EE.UU./Canadá — República Dominicana usa el plan de
+// numeración NANP) para abrir el chat con la persona correcta; sin él,
+// wa.me interpreta mal el número. Si en algún momento llega ya con código
+// de país (11 dígitos empezando en 1, o un número de otro país), se deja
+// tal cual.
+function telefonoConCodigoPais(telefono) {
+  const digitos = (telefono || "").replace(/[^\d]/g, "");
+  if (digitos.length === 10) return `1${digitos}`;
+  return digitos;
+}
+
 function linkWhatsApp(pedido, urlPdf) {
-  const telefono = (pedido.cliente_telefono || "").replace(/[^\d]/g, "");
+  const telefono = telefonoConCodigoPais(pedido.cliente_telefono);
   const totalFormateado = (pedido.total / 100).toFixed(2);
   const mensaje =
     `¡Hola ${pedido.cliente_nombre || ""}! Aquí está tu cotización de Buenos Prints ` +
