@@ -396,6 +396,7 @@ dialog::backdrop{background:rgba(23,20,15,.55)}
     <a href="#materiales">Materiales <small>Gloss o matte, laminados</small></a>
     <a href="#como">Cómo funciona</a>
     <a href="#faq">Preguntas frecuentes</a>
+    <a href="/rastreo">Rastrear pedido <small>Consulta en qué paso va tu pedido</small></a>
   </nav>
 </header>
 
@@ -693,7 +694,7 @@ dialog::backdrop{background:rgba(23,20,15,.55)}
         HECHO CON AMOR DESDE EL CARIBE
       </span>
     </div>
-    <div><a id="footWa" href="#" target="_blank" rel="noopener">WhatsApp</a> · <a id="footIg" href="#" target="_blank" rel="noopener">Instagram</a></div>
+    <div><a id="footWa" href="#" target="_blank" rel="noopener">WhatsApp</a> · <a id="footIg" href="#" target="_blank" rel="noopener">Instagram</a> · <a href="/rastreo">Rastrear pedido</a></div>
   </div>
 </footer>
 
@@ -714,6 +715,7 @@ dialog::backdrop{background:rgba(23,20,15,.55)}
     <div id="demoNote"></div>
     <div>Tu número de pedido es</div>
     <div class="id" id="okId"></div>
+    <p id="okCorreo" class="muted" style="font-size:14px;margin:-6px 0 12px" hidden>También te lo enviamos a tu correo, con tu cotización adjunta.</p>
     <ol>
       <li>Te enviamos los datos para completar el pago (transferencia o enlace).</li>
       <li>Con el pago confirmado, te enviamos la prueba digital por WhatsApp en 24 horas o menos.</li>
@@ -723,6 +725,7 @@ dialog::backdrop{background:rgba(23,20,15,.55)}
     <div class="acts">
       <a class="btn" id="okWa" href="#" target="_blank" rel="noopener">Avisar por WhatsApp</a>
       <a class="btn ghost" id="okPdf" href="#" hidden>Descargar cotización (PDF)</a>
+      <a class="btn ghost" id="okRastreo" href="/rastreo" hidden>Rastrear mi pedido</a>
       <button class="btn ghost" type="button" id="okClose">Cerrar</button>
     </div>
   </div>
@@ -1425,7 +1428,7 @@ $("#form").addEventListener("submit", async e => {
   const btn = $("#sendBtn");
   btn.disabled = true; btn.textContent = "Subiendo archivos…";
   try {
-    let pedido, demo = false, pdfBase64 = null;
+    let pedido, demo = false, pdfBase64 = null, correoCliente = false;
     if (!CONFIG.ENDPOINT) {
       await new Promise(r => setTimeout(r, 900));
       pedido = "DEMO-" + Math.floor(1000 + Math.random() * 9000); demo = true;
@@ -1439,8 +1442,9 @@ $("#form").addEventListener("submit", async e => {
       if (!r.ok) throw new Error(o.error || "No se pudo registrar el pedido");
       pedido = o.numero;
       pdfBase64 = o.pdfBase64 || null;
+      correoCliente = Boolean(o.correoClienteEnviado);
     }
-    mostrarExito(pedido, payload, demo, pdfBase64);
+    mostrarExito(pedido, payload, demo, pdfBase64, correoCliente);
     carrito = []; cuponAplicado = null; rushActivo = false; $("#cuponInput").value = ""; $("#cuponMsg").hidden = true;
     form.reset(); renderEntrega(); renderCarrito();
   } catch (err) {
@@ -1481,7 +1485,7 @@ function construirMensajeWhatsApp(id, p) {
   return lineas.join("\n");
 }
 
-function mostrarExito(id, p, demo, pdfBase64) {
+function mostrarExito(id, p, demo, pdfBase64, correoCliente) {
   $("#okId").textContent = id;
   $("#demoNote").innerHTML = demo ? `<div class="demo">Modo demo: el pedido no se envió. Configura ENDPOINT para recibir pedidos reales.</div>` : "";
   $("#okWa").href = waLink(construirMensajeWhatsApp(id, p));
@@ -1496,6 +1500,13 @@ function mostrarExito(id, p, demo, pdfBase64) {
       linkPdf.hidden = true;
     }
   }
+  const linkRastreo = $("#okRastreo");
+  if (linkRastreo) {
+    linkRastreo.href = "/rastreo?pedido=" + encodeURIComponent(id);
+    linkRastreo.hidden = Boolean(demo);
+  }
+  const avisoCorreo = $("#okCorreo");
+  if (avisoCorreo) avisoCorreo.hidden = !correoCliente;
   $("#ok").showModal();
 }
 

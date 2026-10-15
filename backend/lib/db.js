@@ -69,9 +69,15 @@ async function asegurarTablas() {
       // despliegue previo a agregar razón social / RNC), se le agregan esas
       // columnas sin romper nada. Si ya existen, MySQL devuelve el error
       // 1060 (columna duplicada) y simplemente se ignora.
+      // Las columnas *_en de abajo guardan CUÁNDO entró el pedido a cada
+      // estado, para que la página de rastreo pueda mostrar la fecha de cada
+      // paso (pagado_en ya existía desde antes).
       for (const sql of [
         "ALTER TABLE pedidos ADD COLUMN cliente_razon_social VARCHAR(255) AFTER cliente_nombre",
         "ALTER TABLE pedidos ADD COLUMN cliente_rnc VARCHAR(32) AFTER cliente_razon_social",
+        "ALTER TABLE pedidos ADD COLUMN listo_en DATETIME NULL",
+        "ALTER TABLE pedidos ADD COLUMN entregado_en DATETIME NULL",
+        "ALTER TABLE pedidos ADD COLUMN cancelado_en DATETIME NULL",
       ]) {
         try {
           await pool.query(sql);
@@ -150,14 +156,17 @@ async function actualizarEstado(numero, estado) {
   const pedido = await obtenerPedido(numero);
   if (!pedido) return null;
 
-  const yaPagado = Boolean(pedido.pagado_en);
-  const entraAPagado = ESTADOS_PAGADOS.includes(estado) && !yaPagado;
+  // Cada fecha se fija solo la PRIMERA vez (COALESCE conserva la que ya
+  // estaba). Si el taller salta directo a "listo" o "entregado" sin pasar
+  // por "pagado", igual queda pagado_en (y listo_en al entregar) para que
+  // el rastreo no muestre pasos anteriores como pendientes.
+  const sets = ["estado = ?"];
+  if (ESTADOS_PAGADOS.includes(estado)) sets.push("pagado_en = COALESCE(pagado_en, NOW())");
+  if (estado === "listo_entrega" || estado === "entregado") sets.push("listo_en = COALESCE(listo_en, NOW())");
+  if (estado === "entregado") sets.push("entregado_en = COALESCE(entregado_en, NOW())");
+  if (estado === "cancelado") sets.push("cancelado_en = COALESCE(cancelado_en, NOW())");
 
-  if (entraAPagado) {
-    await pool.query("UPDATE pedidos SET estado = ?, pagado_en = NOW() WHERE numero = ?", [estado, numero]);
-  } else {
-    await pool.query("UPDATE pedidos SET estado = ? WHERE numero = ?", [estado, numero]);
-  }
+  await pool.query(`UPDATE pedidos SET ${sets.join(", ")} WHERE numero = ?`, [estado, numero]);
   return obtenerPedido(numero);
 }
 

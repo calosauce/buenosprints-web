@@ -7,6 +7,8 @@
   RewriteEngine On
   RewriteRule ^backend/ - [F,L]
   RewriteRule (^|/)\.git(/|$) - [F,L]
+  # buenosprints.com/rastreo (con o sin "/" final) muestra rastreo.html
+  RewriteRule ^rastreo/?$ rastreo.html [L]
 </IfModule>
 
 # Respaldo por si mod_rewrite no está activo: igual bloquea con 403.

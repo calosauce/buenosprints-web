@@ -4,11 +4,15 @@ const cors = require("cors");
 
 const { crearPedido, obtenerPedido, marcarPagado, actualizarEstado, ESTADOS } = require("./lib/db");
 const { generarPDFPedido } = require("./lib/pdf");
-const { enviarCotizacionAlTaller, enviarActualizacionAlCliente } = require("./lib/email");
+const { enviarCotizacionAlTaller, enviarActualizacionAlCliente, enviarConfirmacionAlCliente } = require("./lib/email");
+const { telefonoCoincide, vistaPublica, crearLimitador } = require("./lib/rastreo");
 const { linkWhatsApp } = require("./lib/whatsapp");
 const { registrarPedidoEnSheet } = require("./lib/sheets");
 
 const app = express();
+// Hostinger pone un proxy delante de la app: sin esto, req.protocol sale
+// "http" (los links al PDF quedaban en http://) y req.ip sería la del proxy.
+app.set("trust proxy", 1);
 app.use(cors());
 // El carrito permite hasta 35 MB en archivos (CONFIG.MAX_MB_TOTAL en
 // index.html) codificados en base64 — eso infla el tamaño real en ~33%, así
@@ -50,7 +54,8 @@ app.post("/api/pedidos", async (req, res) => {
     // El PDF se sirve desde esta misma API; el link de WhatsApp (con el
     // mensaje y los datos de pago ya armados) se calcula ANTES de avisarle
     // al taller, para poder incluirlo directo en ese correo.
-    const urlPdf = `${req.protocol}://${req.get("host")}/api/pedidos/${pedido.numero}/pdf`;
+    const baseApi = process.env.BASE_URL || `${req.protocol}://${req.get("host")}`;
+    const urlPdf = `${baseApi}/api/pedidos/${pedido.numero}/pdf`;
     const linkWa = linkWhatsApp(pedido, urlPdf);
 
     // El correo al taller es automático y no depende de nada más.
@@ -62,6 +67,16 @@ app.post("/api/pedidos", async (req, res) => {
       console.error("No se pudo enviar el correo al taller:", err.message);
     }
 
+    // Confirmación al CLIENTE (número de pedido + PDF + link de rastreo).
+    // Igual que el del taller: si falla, el pedido ya quedó creado.
+    let correoClienteEnviado = false;
+    try {
+      const r = await enviarConfirmacionAlCliente(pedido, pdfBuffer);
+      correoClienteEnviado = Boolean(r?.ok);
+    } catch (err) {
+      console.error("No se pudo enviar la confirmación al cliente:", err.message);
+    }
+
     // El registro en Sheets es best-effort: si no está configurado, simplemente se omite.
     registrarPedidoEnSheet(pedido).catch((err) => console.error("Sheets:", err.message));
 
@@ -69,6 +84,7 @@ app.post("/api/pedidos", async (req, res) => {
       numero: pedido.numero,
       total: pedido.total,
       correoEnviado,
+      correoClienteEnviado,
       pdfBase64: pdfBuffer.toString("base64"),
       linkWhatsApp: linkWa,
     });
@@ -134,6 +150,32 @@ app.post("/api/pedidos/:numero/estado", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Error interno al actualizar el estado." });
+  }
+});
+
+// Rastreo público (página buenosprints.com/rastreo). Pide el número de
+// pedido + los últimos 4 dígitos del WhatsApp del pedido; si no coinciden
+// responde exactamente lo mismo que si el pedido no existiera, para no
+// confirmar qué números existen. Ver lib/rastreo.js.
+const rastreoPermitido = crearLimitador({ max: 30, ventanaMs: 10 * 60 * 1000 });
+app.get("/api/rastreo/:numero", async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  if (!rastreoPermitido(req.ip)) {
+    return res.status(429).json({ error: "Demasiadas consultas. Espera unos minutos e intenta de nuevo." });
+  }
+  const numero = String(req.params.numero || "").trim().toUpperCase();
+  const tel = String(req.query.tel || "");
+  const noEncontrado = () =>
+    res.status(404).json({ error: "No encontramos un pedido con ese número y esos dígitos. Revisa los datos e intenta de nuevo." });
+
+  if (!/^BP-\d{4}-\d{1,6}$/.test(numero) || !/^\d{4}$/.test(tel)) return noEncontrado();
+  try {
+    const pedido = await obtenerPedido(numero);
+    if (!pedido || !telefonoCoincide(pedido, tel)) return noEncontrado();
+    res.json(vistaPublica(pedido));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error interno al consultar el pedido." });
   }
 });
 

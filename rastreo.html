@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<title>Rastrea tu pedido · Buenos Prints</title>
+<meta name="description" content="Consulta en qué paso va tu pedido de stickers y etiquetas de Buenos Prints.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<script>
+  /* Aplica el tema guardado ANTES de pintar (misma clave que index.html). */
+  (function () {
+    var t = "light";
+    try {
+      var g = localStorage.getItem("bp_tema");
+      if (g === "dark" || g === "light") t = g;
+      else if (window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches) t = "dark";
+    } catch (e) {}
+    document.documentElement.setAttribute("data-theme", t);
+  })();
+</script>
+<style>
+/* Mismos tokens y piezas visuales que index.html (header rojo, botones con
+   sombra dura, tarjetas con borde negro, barras de progreso y círculos
+   numerados del configurador). */
+:root{
+  --bg:#FFF8EC; --paper:#FFFFFF; --ink:#17140F; --muted:#6B6358; --line:#E8DFD0;
+  --accent:#FF4D2E; --accent-ink:#FFFFFF; --sun:#FFC93C; --mint:#2BB673;
+  --ok-bg:#E3F6EC; --ok-fg:#16774A; --warn-bg:#FFF4D1; --bad-bg:#FFE1D9;
+  --display:"Bricolage Grotesque",system-ui,sans-serif; --body:"DM Sans",system-ui,sans-serif;
+  color-scheme:light;
+}
+:root[data-theme="dark"]{ --bg:#17140F; --paper:#231F17; --ink:#F3ECDC; --muted:#B6AC98; --line:#39332580; color-scheme:dark; }
+:root[data-theme="dark"] .pill,
+:root[data-theme="dark"] .notice,
+:root[data-theme="dark"] .cancel{ color:#17140F; }
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--body);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;flex-direction:column}
+h1,h2,h3{font-family:var(--display);line-height:1.04;margin:0 0 .4em;letter-spacing:-.02em;text-wrap:balance}
+p{margin:0 0 1em}
+a{color:inherit}
+.wrap{max-width:760px;margin:0 auto;padding-inline:16px;width:100%}
+.muted{color:var(--muted)}
+.eyebrow{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;display:block}
+:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+
+/* Header (igual al sitio) */
+header.top{position:sticky;top:0;z-index:30;background:var(--accent);color:var(--accent-ink);border-bottom:2px solid var(--ink)}
+.top .wrap{display:flex;align-items:center;gap:14px;height:76px;max-width:1160px}
+.logo{display:flex;align-items:center;flex:none}
+.logo img{height:84px;width:auto;display:block}
+.top .right{margin-left:auto;display:flex;gap:10px;align-items:center}
+.themebtn{border:2px solid var(--ink);background:var(--paper);color:var(--ink);border-radius:999px;width:40px;height:40px;display:grid;place-items:center;cursor:pointer;flex:none;font-size:17px;line-height:1;box-shadow:2px 2px 0 var(--ink)}
+@media(max-width:420px){.top .wrap{height:60px}.logo img{height:44px}.themebtn{width:36px;height:36px;font-size:15px}}
+
+/* Botones */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font:700 15px var(--body);padding:12px 20px;border-radius:999px;border:2px solid var(--ink);background:var(--accent);color:var(--accent-ink);text-decoration:none;cursor:pointer;box-shadow:3px 3px 0 var(--ink);transition:transform .1s,box-shadow .1s}
+.btn:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--ink)}
+.btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+.btn.ghost{background:var(--paper);color:var(--ink)}
+.btn.sm{padding:8px 14px;font-size:14px}
+.btn[disabled]{opacity:.6;cursor:progress}
+
+main{flex:1;padding-block:40px 64px}
+.hero h1{font-size:clamp(34px,6vw,52px)}
+.hero p{font-size:18px;color:var(--muted);max-width:540px}
+
+.card{background:var(--paper);border:2px solid var(--ink);border-radius:22px;padding:22px;box-shadow:6px 6px 0 var(--ink)}
+.card + .card{margin-top:22px}
+
+/* Formulario */
+form.buscar{display:grid;gap:14px;grid-template-columns:1fr}
+@media(min-width:640px){form.buscar{grid-template-columns:1.4fr 1fr auto;align-items:end}}
+@media(max-width:639px){.field small.sp{display:none}}
+.field label{display:block;font-weight:700;font-size:14px;margin-bottom:5px}
+.field small{display:block;color:var(--muted);font-size:12.5px;margin-top:4px}
+input{width:100%;font:16px var(--body);padding:11px 12px;border:2px solid var(--line);border-radius:12px;background:var(--paper);color:var(--ink)}
+input:focus{border-color:var(--ink);outline:none}
+.err{margin:14px 0 0;background:var(--bad-bg);border:2px solid var(--ink);border-radius:14px;padding:10px 14px;font-size:14.5px;color:#17140F}
+
+/* Resultado */
+.head{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin-bottom:18px}
+.pill{display:inline-block;background:var(--sun);border:2px solid var(--ink);border-radius:999px;padding:4px 14px;font-weight:800;font-size:18px}
+.head .estado{font-weight:700}
+.badge{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--ink);border-radius:999px;padding:3px 10px;font-size:13px;font-weight:700;background:var(--sun);color:#17140F}
+
+/* Barras de progreso (calcadas de .stepsprog del configurador) */
+.prog-bars{display:flex;gap:5px}
+.prog-bars span{flex:1;height:6px;border-radius:999px;background:var(--line);transition:background .4s}
+.prog-bars span.on{background:var(--ink)}
+.prog small{display:block;margin-top:7px;color:var(--muted);font-size:12px;font-weight:700;letter-spacing:.03em;text-transform:uppercase}
+
+/* Línea de tiempo con círculos numerados (calcados de .step-h .n) */
+ol.pasos{list-style:none;margin:22px 0 0;padding:0}
+.paso{position:relative;display:grid;grid-template-columns:34px 1fr;gap:14px;padding-bottom:22px}
+.paso:last-child{padding-bottom:0}
+.paso::before{content:"";position:absolute;left:16px;top:34px;bottom:0;border-left:2px dashed var(--line)}
+.paso:last-child::before{display:none}
+.paso.hecho::before{border-left:2px solid var(--ink)}
+.n{width:34px;height:34px;border-radius:50%;border:2px solid var(--line);background:var(--paper);color:var(--muted);display:grid;place-items:center;font-weight:700;font-size:15px;position:relative;z-index:1}
+.paso.hecho .n{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.paso.final .n{background:var(--mint);border-color:var(--ink);color:#fff;box-shadow:2px 2px 0 var(--ink)}
+.paso.actual .n{background:var(--accent);border-color:var(--ink);color:#fff;box-shadow:2px 2px 0 var(--ink)}
+.paso.actual .n::after{content:"";position:absolute;inset:-7px;border-radius:50%;border:2px solid var(--accent);opacity:.5;animation:pulso 1.8s ease-out infinite}
+@keyframes pulso{from{transform:scale(.8);opacity:.6}to{transform:scale(1.25);opacity:0}}
+@media(prefers-reduced-motion:reduce){.paso.actual .n::after{animation:none}}
+.paso h3{font-size:19px;margin:5px 0 2px}
+.paso:not(.hecho):not(.actual) h3{color:var(--muted)}
+.paso p{margin:0;font-size:14.5px;color:var(--muted)}
+.paso .fecha{display:inline-block;font-size:12.5px;font-weight:700;color:var(--ok-fg);background:var(--ok-bg);border-radius:999px;padding:1px 9px;margin-top:6px}
+:root[data-theme="dark"] .paso .fecha{color:#16774A}
+
+.cancel{background:var(--bad-bg);border:2px solid var(--ink);border-radius:14px;padding:12px 16px;margin-bottom:6px}
+.cancel b{display:block;font-family:var(--display);font-size:19px}
+
+/* Resumen */
+.items{list-style:none;margin:0;padding:0}
+.items li{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px dashed var(--line)}
+.items li:first-child{border-top:0;padding-top:0}
+.items small{display:block;color:var(--muted);font-size:13px}
+.total{display:flex;justify-content:space-between;border-top:2px solid var(--ink);margin-top:8px;padding-top:10px;font-family:var(--display);font-weight:800;font-size:20px}
+.acts{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+
+footer{background:#17140F;color:#FFF8EC;padding-block:32px}
+footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;align-items:center;max-width:1160px}
+footer a{color:#FFF8EC}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a href="/" class="logo"><img src="/logo-wide.svg" alt="Buenos Prints"></a>
+    <div class="right">
+      <button class="themebtn" type="button" id="themeToggle" aria-label="Cambiar tema" title="Cambiar tema">🌙</button>
+      <a class="btn sm ghost" href="/#stickers">Hacer un pedido</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <div class="hero">
+      <span class="eyebrow">Rastreo de pedidos</span>
+      <h1>¿Cómo va tu pedido?</h1>
+      <p>Escribe tu número de pedido y los últimos 4 dígitos del WhatsApp con el que lo hiciste.</p>
+    </div>
+
+    <div class="card">
+      <form class="buscar" id="buscar" novalidate>
+        <div class="field">
+          <label for="numero">Número de pedido</label>
+          <input id="numero" name="numero" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="BP-2026-000123" required>
+          <small>Está en tu correo de confirmación y en tu cotización.</small>
+        </div>
+        <div class="field">
+          <label for="tel">Últimos 4 de tu WhatsApp</label>
+          <input id="tel" name="tel" inputmode="numeric" pattern="\d{4}" maxlength="4" autocomplete="off" placeholder="1234" required>
+          <small class="sp">&nbsp;</small>
+        </div>
+        <div class="field">
+          <button class="btn" id="btnBuscar" type="submit" style="width:100%">Rastrear</button>
+          <small class="sp">&nbsp;</small>
+        </div>
+      </form>
+      <div class="err" id="err" role="alert" hidden></div>
+    </div>
+
+    <section id="resultado" aria-live="polite" hidden>
+      <div class="card" style="margin-top:22px">
+        <div class="head">
+          <span class="pill" id="rNumero"></span>
+          <span class="badge" id="rRush" hidden><svg width="12" height="14" viewBox="0 0 12 14" aria-hidden="true"><path d="M7 0 0 8h5l-1 6 7-8H6l1-6Z" fill="currentColor"/></svg>RUSH</span>
+        </div>
+
+        <div class="cancel" id="rCancel" hidden>
+          <b>Pedido cancelado</b>
+          <span id="rCancelTxt">Si crees que es un error o quieres retomarlo, escríbenos por WhatsApp.</span>
+        </div>
+
+        <div class="prog" id="rProg" aria-hidden="true">
+          <div class="prog-bars" id="rBars"></div>
+          <small id="rProgLabel"></small>
+        </div>
+
+        <ol class="pasos" id="rPasos"></ol>
+      </div>
+
+      <div class="card">
+        <span class="eyebrow">Tu pedido</span>
+        <ul class="items" id="rItems"></ul>
+        <div class="total"><span>Total</span><span id="rTotal"></span></div>
+        <p class="muted" id="rEntrega" style="margin:10px 0 0;font-size:14px"></p>
+        <div class="acts">
+          <a class="btn" id="rWa" href="#" target="_blank" rel="noopener">Preguntar por WhatsApp</a>
+          <button class="btn ghost" type="button" id="rOtra">Rastrear otro pedido</button>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div><b style="font-family:var(--display);font-size:20px">Buenos Prints</b><br><span style="opacity:.7">Stickers y etiquetas personalizadas · Santo Domingo, RD</span></div>
+    <div><a href="https://wa.me/18495779893" target="_blank" rel="noopener">WhatsApp</a> · <a href="https://instagram.com/buenos.prints" target="_blank" rel="noopener">Instagram</a> · <a href="/">Inicio</a></div>
+  </div>
+</footer>
+
+<script>
+const API = "https://api.buenosprints.com/api/rastreo/";
+const WHATSAPP = "18495779893";
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const rd = (centavos) => "RD$" + ((centavos || 0) / 100).toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fecha = (iso) => iso ? new Date(iso).toLocaleString("es-DO", { timeZone: "America/Santo_Domingo", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "";
+
+/* ---------- Tema (misma clave que el sitio) ---------- */
+function pintarBotonTema() {
+  const dark = document.documentElement.getAttribute("data-theme") === "dark";
+  const b = $("#themeToggle");
+  b.textContent = dark ? "☀️" : "🌙";
+  b.setAttribute("aria-label", dark ? "Cambiar a tema claro" : "Cambiar a tema oscuro");
+}
+pintarBotonTema();
+$("#themeToggle").addEventListener("click", () => {
+  const t = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", t);
+  try { localStorage.setItem("bp_tema", t); } catch (e) {}
+  pintarBotonTema();
+});
+
+/* ---------- Normalización de entradas ---------- */
+// Acepta "bp-2026-123", "BP 2026 000123", "2026-123" o solo "123" (año actual).
+function normalizarNumero(v) {
+  const s = String(v || "").toUpperCase().replace(/\s+/g, "-").replace(/[^A-Z0-9-]/g, "");
+  let m = s.match(/^(?:BP-?)?(\d{4})-?(\d{1,6})$/);
+  if (m) return `BP-${m[1]}-${m[2].padStart(6, "0")}`;
+  m = s.match(/^(?:BP-?)?(\d{1,6})$/);
+  if (m) return `BP-${new Date().getFullYear()}-${m[1].padStart(6, "0")}`;
+  return null;
+}
+
+function mostrarError(msg) {
+  const e = $("#err");
+  e.textContent = msg;
+  e.hidden = false;
+}
+
+/* ---------- Consulta ---------- */
+async function rastrear(numeroCrudo, telCrudo, { desdeLink = false } = {}) {
+  $("#err").hidden = true;
+  const numero = normalizarNumero(numeroCrudo);
+  const tel = String(telCrudo || "").replace(/\D/g, "");
+  if (!numero) { mostrarError("Escribe tu número de pedido (ej. BP-2026-000123)."); $("#numero").focus(); return; }
+  if (tel.length !== 4) { mostrarError("Escribe los últimos 4 dígitos del WhatsApp con el que hiciste el pedido."); $("#tel").focus(); return; }
+  $("#numero").value = numero;
+  $("#tel").value = tel;
+
+  const btn = $("#btnBuscar");
+  btn.disabled = true; btn.textContent = "Buscando…";
+  try {
+    const r = await fetch(API + encodeURIComponent(numero) + "?tel=" + tel, { headers: { Accept: "application/json" } });
+    const o = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(o.error || "No pudimos consultar tu pedido. Intenta de nuevo en un momento.");
+    pintar(o);
+    // Deja el número en la URL (sin los dígitos) para poder volver a él.
+    try { history.replaceState(null, "", "?pedido=" + encodeURIComponent(numero)); } catch (e) {}
+    if (!desdeLink) $("#resultado").scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (err) {
+    $("#resultado").hidden = true;
+    mostrarError(err.message === "Failed to fetch" ? "No pudimos conectarnos. Revisa tu internet e intenta de nuevo." : err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = "Rastrear";
+  }
+}
+
+/* ---------- Pintar resultado ---------- */
+function pintar(p) {
+  $("#rNumero").textContent = p.numero;
+  $("#rRush").hidden = !p.rush;
+
+  const total = p.pasos.length;
+  const actual = p.cancelado ? -1 : p.pasoActual;
+
+  $("#rCancel").hidden = !p.cancelado;
+  if (p.cancelado && p.canceladoEn) $("#rCancelTxt").textContent = `Cancelado el ${fecha(p.canceladoEn)} — si crees que es un error o quieres retomarlo, escríbenos por WhatsApp.`;
+  $("#rProg").hidden = p.cancelado;
+  $("#rBars").innerHTML = p.pasos.map((_, i) => `<span class="${i <= actual ? "on" : ""}"></span>`).join("");
+  $("#rProgLabel").textContent = actual >= 0 ? `Paso ${actual + 1} de ${total} · ${p.pasos[actual].titulo}` : "";
+
+  $("#rPasos").innerHTML = p.pasos.map((s, i) => {
+    // El último paso (Entregado) ya no "pulsa": se ve terminado, en verde.
+    const esFinal = !p.cancelado && i === actual && i === total - 1;
+    const hecho = !p.cancelado && i < actual;
+    const esActual = !p.cancelado && i === actual && !esFinal;
+    const cls = [hecho ? "hecho" : "", esActual ? "actual" : "", esFinal ? "hecho final" : ""].join(" ").trim();
+    return `<li class="paso ${cls}" ${esActual || esFinal ? 'aria-current="step"' : ""}>
+      <span class="n">${hecho || esFinal ? "✓" : i + 1}</span>
+      <div>
+        <h3>${esc(s.titulo)}</h3>
+        ${hecho || esActual || esFinal ? `<p>${esc(s.descripcion)}</p>` : ""}
+        ${s.fecha && (hecho || esActual || esFinal) ? `<span class="fecha">${esc(fecha(s.fecha))}</span>` : ""}
+      </div>
+    </li>`;
+  }).join("");
+
+  $("#rItems").innerHTML = p.items.map((it) => {
+    const medida = it.w && it.h ? ` · ${it.w}" × ${it.h}"` : "";
+    const extra = [it.material, it.forma].filter(Boolean).join(" · ");
+    return `<li><div><b>${esc(it.producto || "Producto")}</b>
+      <small>${esc(Number(it.cantidad || 0).toLocaleString("es-DO"))} unds${esc(medida)}${extra ? " · " + esc(extra) : ""}</small></div></li>`;
+  }).join("");
+  $("#rTotal").textContent = rd(p.total);
+  $("#rEntrega").textContent = p.entrega ? `Entrega: ${p.entrega}` : "";
+  $("#rWa").href = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`¡Hola! Quiero saber de mi pedido ${p.numero}.`)}`;
+
+  $("#resultado").hidden = false;
+}
+
+$("#buscar").addEventListener("submit", (e) => {
+  e.preventDefault();
+  rastrear($("#numero").value, $("#tel").value);
+});
+$("#tel").addEventListener("input", (e) => { e.target.value = e.target.value.replace(/\D/g, "").slice(0, 4); });
+$("#rOtra").addEventListener("click", () => {
+  $("#resultado").hidden = true;
+  $("#numero").value = ""; $("#tel").value = "";
+  try { history.replaceState(null, "", location.pathname); } catch (e) {}
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  $("#numero").focus();
+});
+
+/* ---------- Link directo desde el correo: ?pedido=...&tel=... ---------- */
+(function () {
+  const q = new URLSearchParams(location.search);
+  const numero = q.get("pedido");
+  const tel = q.get("tel");
+  if (numero) $("#numero").value = numero;
+  if (numero && tel) rastrear(numero, tel, { desdeLink: true });
+  else if (numero) $("#tel").focus();
+})();
+</script>
+</body>
+</html>
