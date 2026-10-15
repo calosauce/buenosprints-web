@@ -30,7 +30,7 @@ function crearTransportador() {
 // `archivosAdjuntos` son los diseños que el cliente subió directo (no por
 // enlace de Drive/WeTransfer) — ver server.js, que los separa del resto del
 // pedido antes de guardarlo. Formato nodemailer: [{ filename, content }].
-async function enviarCotizacionAlTaller(pedido, pdfBuffer, linkWhatsApp, archivosAdjuntos = []) {
+async function enviarCotizacionAlTaller(pedido, pdfBuffer, linkWhatsApp, archivosAdjuntos = [], avisosExtra = []) {
   const transportador = crearTransportador();
   await transportador.sendMail({
     from: { name: "Buenos Prints — Pedidos", address: process.env.SMTP_USER },
@@ -38,8 +38,8 @@ async function enviarCotizacionAlTaller(pedido, pdfBuffer, linkWhatsApp, archivo
     // Responder este correo le escribe directo al cliente (si dejó correo).
     replyTo: pedido.cliente_email || undefined,
     subject: asuntoTaller(pedido),
-    text: textoTaller(pedido, linkWhatsApp, archivosAdjuntos.length),
-    html: htmlTaller(pedido, linkWhatsApp, archivosAdjuntos.length),
+    text: textoTaller(pedido, linkWhatsApp, archivosAdjuntos.length, avisosExtra),
+    html: htmlTaller(pedido, linkWhatsApp, archivosAdjuntos.length, avisosExtra),
     attachments: [{ filename: `${pedido.numero}.pdf`, content: pdfBuffer }, ...archivosAdjuntos],
   });
 }
@@ -157,10 +157,10 @@ function filaDato(k, v) {
   if (!v) return "";
   return `<tr><td valign="top" style="padding:6px 12px 6px 0;font:14px ${FUENTE};color:${C.muted};white-space:nowrap">${esc(k)}</td><td style="padding:6px 0;font:15px/1.4 ${FUENTE};color:${C.ink}">${v}</td></tr>`;
 }
-function textoTaller(p, linkWa, nArchivos) {
+function textoTaller(p, linkWa, nArchivos, avisosExtra = []) {
   const d = leerDetalle(p);
   const items = Array.isArray(d.items) ? d.items : [];
-  const avisos = avisosTaller(p, d).map((a) => "• " + a.replace(/<[^>]+>/g, ""));
+  const avisos = [...avisosExtra, ...avisosTaller(p, d)].map((a) => "• " + a.replace(/<[^>]+>/g, ""));
   return [
     `Nuevo pedido ${p.numero}`, "",
     ...(avisos.length ? ["ATENCIÓN:", ...avisos, ""] : []),
@@ -216,7 +216,7 @@ function avisosTaller(p, d) {
   return avisos;
 }
 
-function htmlTaller(p, linkWa, nArchivos) {
+function htmlTaller(p, linkWa, nArchivos, avisosExtra = []) {
   const d = leerDetalle(p);
   const items = Array.isArray(d.items) ? d.items : [];
   const tel = p.cliente_telefono ? `<a href="tel:${esc(String(p.cliente_telefono).replace(/[^\d+]/g, ""))}" style="color:${C.ink}">${esc(p.cliente_telefono)}</a>` : "";
@@ -234,7 +234,7 @@ function htmlTaller(p, linkWa, nArchivos) {
     </td></tr>`;
   }).join("");
 
-  const avisos = avisosTaller(p, d);
+  const avisos = [...avisosExtra, ...avisosTaller(p, d)];
   const cuerpo = `
     ${avisos.length ? `<div style="background:#FFF4D1;border:2px solid ${C.ink};border-radius:14px;padding:10px 14px;margin:0 0 18px;font:14.5px/1.5 ${FUENTE};color:${C.ink}">${avisos.map((a) => `<div style="padding:2px 0">${a}</div>`).join("")}</div>` : ""}
 
@@ -248,6 +248,7 @@ function htmlTaller(p, linkWa, nArchivos) {
       ${filaDato("Entrega", entrega)}
       ${filaDato("Fecha deseada", esc(d.fechaDeseada || ""))}
       ${filaDato("RUSH", d.rush ? `<b style="color:${C.accent}">Sí — entrega en 24h</b>` : "")}
+      ${filaDato("Cupón", d.cupon && d.cupon.codigo ? esc(d.cupon.codigo) : "")}
     </table>
 
     <h2 style="margin:22px 0 6px;font:800 20px ${FUENTE_TITULO};color:${C.ink}">Diseños</h2>
@@ -338,6 +339,48 @@ function plantillaHTML(pedido, { preheader, titulo, intro, pasoActual, aviso, cu
   });
 }
 
+// "AAAA-MM-DD" → "15 de noviembre de 2026"
+function fechaLarga(iso) {
+  const [a, m, d] = String(iso).split("-").map(Number);
+  return new Date(Date.UTC(a, m - 1, d)).toLocaleDateString("es-DO", { timeZone: "UTC", day: "numeric", month: "long", year: "numeric" });
+}
+function urlUsarCupon(codigo) {
+  return `${process.env.SITIO_URL || "https://buenosprints.com"}/?cupon=${encodeURIComponent(codigo)}#pedido`;
+}
+// Pergamino de descuento: tarjeta de "objeto" de juego de rol (diseño propio),
+// con rodillos de madera arriba y abajo. Solo tablas y colores sólidos para
+// que se vea igual en Gmail y Outlook.
+function pergaminoHTML(cupon) {
+  const madera = "#8A5A2B", papel = "#F6E7C1", tinta = "#4A2E12", oro = "#B7791F", morado = "#6B3FA0";
+  const rodillo = `<tr><td style="padding:0"><div style="height:16px;background:${madera};border:2px solid ${C.ink};border-radius:10px;font-size:0;line-height:0">&nbsp;</div></td></tr>`;
+  const fila = (k, v) => `<tr><td style="padding:3px 0;font:14px/1.4 ${FUENTE};color:${tinta}"><span style="color:${oro};font-weight:700">${k}:</span> ${v}</td></tr>`;
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:4px 0 22px"><tr><td align="center">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:400px">
+    ${rodillo}
+    <tr><td style="padding:0 12px">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${papel};border-left:2px solid ${C.ink};border-right:2px solid ${C.ink}">
+        <tr><td style="padding:18px 20px 20px">
+          <div style="font:700 11px ${FUENTE};letter-spacing:.14em;text-transform:uppercase;color:${morado};text-align:center">Objeto único · Solo para ti</div>
+          <div style="font:800 24px/1.15 ${FUENTE_TITULO};color:${tinta};text-align:center;margin:6px 0 12px">Pergamino de<br>Descuento ${cupon.porcentaje}%</div>
+          <div style="border-top:2px dashed ${madera};margin:0 0 10px;font-size:0;line-height:0">&nbsp;</div>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            ${fila("Efecto", `<b>−${cupon.porcentaje}%</b> en tu próximo pedido de stickers o etiquetas`)}
+            ${fila("Tasa de éxito", "100%")}
+            ${fila("Usos", "1")}
+            ${fila("Vence", `<b>${esc(fechaLarga(cupon.expira))}</b>`)}
+          </table>
+          <div style="margin:14px 0 4px;text-align:center;font:700 12px ${FUENTE};color:${tinta}">Tu código</div>
+          <div style="text-align:center"><span style="display:inline-block;background:#FFFFFF;border:2px dashed ${tinta};border-radius:10px;padding:8px 16px;font:800 22px 'Courier New',Courier,monospace;letter-spacing:.08em;color:${C.ink}">${esc(cupon.codigo)}</span></div>
+          <div style="text-align:center;margin:16px 0 0">${boton(urlUsarCupon(cupon.codigo), "Usar mi pergamino")}</div>
+          <div style="text-align:center;font:12px/1.4 ${FUENTE};color:${tinta};opacity:.8">Aplica sobre los productos (no envío ni RUSH). Un cupón por pedido.</div>
+        </td></tr>
+      </table>
+    </td></tr>
+    ${rodillo}
+  </table>
+</td></tr></table>`;
+}
+
 const h2 = (t) => `<h2 style="margin:26px 0 8px;font:800 20px ${FUENTE_TITULO};color:${C.ink}">${t}</h2>`;
 const parrafo = (t) => `<p style="margin:0 0 20px;font:15px/1.55 ${FUENTE};color:${C.ink}">${t}</p>`;
 const lista = (items) => `<ol style="margin:0 0 20px;padding-left:20px;font:15px/1.55 ${FUENTE};color:${C.ink}">${items.map((t) => `<li>${t}</li>`).join("")}</ol>`;
@@ -407,18 +450,38 @@ const CORREOS = {
   },
 
   entregado: {
-    asunto: (p) => `Pedido ${p.numero} — Entregado`,
-    html: (p) => plantillaHTML(p, {
-      preheader: `Tu pedido ${p.numero} fue entregado. ¡Gracias por preferirnos!`,
-      titulo: `¡Pedido entregado${primerNombre(p) ? ", " + esc(primerNombre(p)) : ""}!`,
-      intro: "Esperamos que te encante",
+    asunto: (p, x = {}) => x.cupon
+      ? `Pedido ${p.numero} entregado — y un regalo para tu próxima aventura`
+      : `Pedido ${p.numero} — Entregado`,
+    html: (p, x = {}) => plantillaHTML(p, {
+      preheader: x.cupon
+        ? `Misión cumplida: tu pedido llegó. Te dejamos un pergamino de ${x.cupon.porcentaje}% para la próxima.`
+        : `Tu pedido ${p.numero} fue entregado. ¡Gracias por preferirnos!`,
+      titulo: `¡Llegamos a la cima${primerNombre(p) ? ", " + esc(primerNombre(p)) : ""}!`,
+      intro: "Tu pedido fue entregado",
       pasoActual: 3,
-      cuerpo: h2("¡Gracias por preferirnos!") + parrafo(
-        "Si tienes cualquier duda con tu pedido, o quieres hacer otro, escríbenos por WhatsApp. " +
-        "Y si publicas tus stickers, etiquétanos en Instagram: <a href=\"https://instagram.com/buenos.prints\" style=\"color:" + C.ink + "\">@buenos.prints</a>."
-      ),
+      cuerpo:
+        h2("Misión cumplida") +
+        parrafo("Toda gran aventura empieza con un paso pequeño: el tuyo fue subir un diseño. De ahí en adelante fue puro camino: la mesa de corte, el laminado, el troquel siguiendo cada curva… y una última subida hasta llegar a tus manos.") +
+        parrafo(x.cupon
+          ? "Pero las mejores historias no se acaban en el primer capítulo. Para tu próxima aventura, te dejamos esto en el camino:"
+          : "Pero las mejores historias no se acaban en el primer capítulo. Cuando quieras empezar la próxima, aquí estamos.") +
+        (x.cupon ? pergaminoHTML(x.cupon) : "") +
+        parrafo("¿Ya los pegaste? Nos encantaría verlos: etiquétanos en Instagram <a href=\"https://instagram.com/buenos.prints\" style=\"color:" + C.ink + "\">@buenos.prints</a>."),
     }),
-    texto: (p) => `Hola${primerNombre(p) ? " " + primerNombre(p) : ""},\n\nConfirmamos que tu pedido ${p.numero} fue entregado. ¡Esperamos que te encante!\n\nSi tienes cualquier duda o quieres hacer otro pedido, aquí estamos.\n\n¡Gracias por preferirnos!`,
+    texto: (p, x = {}) => [
+      `¡Llegamos a la cima${primerNombre(p) ? ", " + primerNombre(p) : ""}!`, "",
+      `Tu pedido ${p.numero} fue entregado. Toda gran aventura empieza con un paso pequeño: el tuyo fue subir un diseño. Después vino el camino —la mesa de corte, el laminado, el troquel— hasta llegar a tus manos.`, "",
+      "Pero las mejores historias no se acaban en el primer capítulo.",
+      ...(x.cupon ? [
+        "", `🎁 PERGAMINO DE DESCUENTO ${x.cupon.porcentaje}%`,
+        `Código: ${x.cupon.codigo}`,
+        `Efecto: ${x.cupon.porcentaje}% de descuento en tu próximo pedido (sobre los productos; no aplica a envío ni RUSH).`,
+        `Usos: 1 · Vence: ${fechaLarga(x.cupon.expira)}`,
+        `Úsalo aquí: ${urlUsarCupon(x.cupon.codigo)}`,
+      ] : []),
+      "", "¿Ya los pegaste? Etiquétanos en Instagram: @buenos.prints",
+    ].join("\n"),
   },
 
   cancelado: {
@@ -435,7 +498,7 @@ const CORREOS = {
   },
 };
 
-async function enviarCorreoCliente(pedido, clave, attachments = []) {
+async function enviarCorreoCliente(pedido, clave, attachments = [], extra = {}) {
   const correo = CORREOS[clave];
   if (!correo || !pedido.cliente_email) return { ok: false, motivo: "sin plantilla o sin correo" };
   const transportador = crearTransportador();
@@ -443,9 +506,9 @@ async function enviarCorreoCliente(pedido, clave, attachments = []) {
     from: { name: "Buenos Prints", address: process.env.SMTP_USER },
     to: pedido.cliente_email,
     replyTo: process.env.TALLER_EMAIL || process.env.SMTP_USER,
-    subject: correo.asunto(pedido),
-    text: `${correo.texto(pedido)}\n\nSigue tu pedido: ${urlRastreo(pedido)}\n\n— Buenos Prints`,
-    html: correo.html(pedido),
+    subject: correo.asunto(pedido, extra),
+    text: `${correo.texto(pedido, extra)}\n\nSigue tu pedido: ${urlRastreo(pedido)}\n\n— Buenos Prints`,
+    html: correo.html(pedido, extra),
     attachments,
   });
   return { ok: true };
@@ -460,9 +523,10 @@ function enviarConfirmacionAlCliente(pedido, pdfBuffer) {
 
 // Actualización cuando el taller cambia el Estado en el Sheet. "cotizado" no
 // tiene correo (es el estado inicial: el cliente ya recibió la confirmación).
-function enviarActualizacionAlCliente(pedido, estado) {
+// `extra.cupon`: cupón de fidelidad (solo al pasar a "entregado").
+function enviarActualizacionAlCliente(pedido, estado, extra = {}) {
   if (estado === "confirmacion") return Promise.resolve({ ok: false, motivo: "estado inválido" });
-  return enviarCorreoCliente(pedido, estado);
+  return enviarCorreoCliente(pedido, estado, [], extra);
 }
 
 module.exports = {

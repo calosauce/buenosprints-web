@@ -6,6 +6,7 @@ const { crearPedido, obtenerPedido, marcarPagado, actualizarEstado, ESTADOS } = 
 const { generarPDFPedido } = require("./lib/pdf");
 const { enviarCotizacionAlTaller, enviarActualizacionAlCliente, enviarConfirmacionAlCliente } = require("./lib/email");
 const { telefonoCoincide, vistaPublica, crearLimitador } = require("./lib/rastreo");
+const { cuponParaPedido, consultarCupon, usarCupon, esCuponDeFidelidad } = require("./lib/cupones");
 const { linkWhatsApp } = require("./lib/whatsapp");
 const { registrarPedidoEnSheet } = require("./lib/sheets");
 
@@ -49,6 +50,22 @@ app.post("/api/pedidos", async (req, res) => {
     };
 
     const pedido = await crearPedido({ cliente: cliente || {}, detalle: detalleLiviano, subtotal, total });
+
+    // Cupón de fidelidad (VUELVE-XXXXX): el carrito ya lo validó, pero aquí
+    // se confirma y se marca usado de forma atómica. Si ya no sirve (usado
+    // por otro pedido o vencido justo ahora), el pedido igual se crea y el
+    // taller recibe un aviso para no respetar ese descuento a ciegas.
+    const avisosExtra = [];
+    const codigoCupon = detalle.cupon && detalle.cupon.codigo;
+    if (codigoCupon && esCuponDeFidelidad(codigoCupon)) {
+      try {
+        const ok = await usarCupon(codigoCupon, pedido.numero);
+        if (!ok) avisosExtra.push(`<b>Cupón no válido:</b> ${String(codigoCupon).replace(/[<>&"]/g, "")} ya estaba usado o vencido — el descuento aplicado no corresponde, confírmalo con el cliente.`);
+      } catch (err) {
+        console.error("Cupones:", err.message);
+        avisosExtra.push(`<b>Cupón sin verificar:</b> no se pudo comprobar ${String(codigoCupon).replace(/[<>&"]/g, "")}; revísalo antes de cobrar.`);
+      }
+    }
     const pdfBuffer = await generarPDFPedido(pedido, { esFactura: false });
 
     // El PDF se sirve desde esta misma API; el link de WhatsApp (con el
@@ -63,7 +80,7 @@ app.post("/api/pedidos", async (req, res) => {
     // El correo al taller es automático y no depende de nada más.
     let correoEnviado = true;
     try {
-      await enviarCotizacionAlTaller(pedido, pdfBuffer, linkWa, archivosAdjuntos);
+      await enviarCotizacionAlTaller(pedido, pdfBuffer, linkWa, archivosAdjuntos, avisosExtra);
     } catch (err) {
       correoEnviado = false;
       console.error("No se pudo enviar el correo al taller:", err.message);
@@ -140,9 +157,19 @@ app.post("/api/pedidos/:numero/estado", async (req, res) => {
     const pedido = await actualizarEstado(req.params.numero, estado);
     if (!pedido) return res.status(404).json({ error: "Pedido no encontrado" });
 
+    // Pedido entregado → cupón de fidelidad (solo si hay correo para enviarlo).
+    let cupon = null;
+    if (estado === "entregado" && pedido.cliente_email) {
+      try {
+        cupon = await cuponParaPedido(pedido.numero);
+      } catch (err) {
+        console.error("No se pudo crear el cupón de fidelidad:", err.message);
+      }
+    }
+
     let correoEnviado = false;
     try {
-      const resultado = await enviarActualizacionAlCliente(pedido, estado);
+      const resultado = await enviarActualizacionAlCliente(pedido, estado, { cupon });
       correoEnviado = Boolean(resultado?.ok);
     } catch (err) {
       console.error("No se pudo enviar el correo de actualización de estado:", err.message);
@@ -183,6 +210,41 @@ app.get("/api/rastreo/:numero", async (req, res) => {
     console.error(err);
     res.status(500).json({ error: "Error interno al consultar el pedido." });
   }
+});
+
+// Valida un cupón de fidelidad desde el carrito. Mismo limitador que el
+// rastreo para que no se puedan probar códigos a lo loco.
+const cuponPermitido = crearLimitador({ max: 30, ventanaMs: 10 * 60 * 1000 });
+app.get("/api/cupones/:codigo", async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  if (!cuponPermitido(req.ip)) {
+    return res.status(429).json({ valido: false, error: "Demasiados intentos. Espera unos minutos." });
+  }
+  const codigo = String(req.params.codigo || "");
+  if (!esCuponDeFidelidad(codigo) || codigo.length > 32) return res.json({ valido: false, motivo: "no_existe" });
+  try {
+    res.json(await consultarCupon(codigo));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ valido: false, error: "No se pudo validar el cupón." });
+  }
+});
+
+// TEMPORAL — prueba del cupón de fidelidad sin pasar por el Sheet. Solo
+// pedidos de prueba (nombre "PRUEBA…" y correo = el del taller). Se elimina tras la prueba.
+app.post("/api/prueba/:numero/estado", async (req, res) => {
+  const { estado } = req.body || {};
+  if (!ESTADOS.includes(estado)) return res.status(400).json({ error: "Estado inválido." });
+  const actual = await obtenerPedido(req.params.numero);
+  const correoTaller = (process.env.TALLER_EMAIL || process.env.SMTP_USER || "").toLowerCase();
+  const esPrueba = actual && /^PRUEBA/i.test(actual.cliente_nombre || "") && (actual.cliente_email || "").toLowerCase() === correoTaller;
+  if (!esPrueba) return res.status(404).json({ error: "Solo pedidos de prueba." });
+  const pedido = await actualizarEstado(actual.numero, estado);
+  let cupon = null;
+  if (estado === "entregado") { try { cupon = await cuponParaPedido(pedido.numero); } catch (err) { console.error(err.message); } }
+  let correoEnviado = false;
+  try { correoEnviado = Boolean((await enviarActualizacionAlCliente(pedido, estado, { cupon }))?.ok); } catch (err) { console.error(err.message); }
+  res.json({ ok: true, estado: pedido.estado, correoEnviado, cupon: cupon && { codigo: cupon.codigo, expira: cupon.expira } });
 });
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));

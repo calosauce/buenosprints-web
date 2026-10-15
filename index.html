@@ -1435,22 +1435,32 @@ function descuentoCupon(sub) {
   const d = cuponAplicado.tipo === "pct" ? sub * cuponAplicado.valor : cuponAplicado.valor;
   return Math.min(redondear(d), sub);
 }
-function aplicarCupon() {
+// Cupones personales de fidelidad (VUELVE-XXXXX, llegan en el correo de
+// "pedido entregado"): son de un solo uso y vencen, así que se validan con
+// el servidor. Los generales siguen en CONFIG.CUPONES.
+const CUPONES_API = "https://api.buenosprints.com/api/cupones/";
+const fechaCupon = iso => { const [a, m, d] = iso.split("-").map(Number); return new Date(Date.UTC(a, m - 1, d)).toLocaleDateString("es-DO", { timeZone: "UTC", day: "numeric", month: "long" }); };
+async function aplicarCupon() {
   const input = $("#cuponInput"), msg = $("#cuponMsg");
   const code = input.value.trim().toUpperCase();
   msg.hidden = false;
   if (!code) { msg.textContent = "Escribe un código de descuento."; return; }
+  const ok = (c, texto) => { cuponAplicado = { codigo: code, ...c }; msg.style.color = "var(--ok-fg)"; msg.textContent = texto; renderTotales(); };
+  const mal = texto => { cuponAplicado = null; msg.style.color = "var(--accent)"; msg.textContent = texto; renderTotales(); };
   const c = CONFIG.CUPONES[code];
-  if (!c) {
-    cuponAplicado = null;
-    msg.style.color = "var(--accent)";
-    msg.textContent = `El código "${code}" no es válido.`;
-  } else {
-    cuponAplicado = { codigo: code, ...c };
-    msg.style.color = "var(--ok-fg)";
-    msg.textContent = `Código "${code}" aplicado: ${c.desc}.`;
+  if (c) return ok(c, `Código "${code}" aplicado: ${c.desc}.`);
+  if (!code.startsWith("VUELVE-")) return mal(`El código "${code}" no es válido.`);
+  msg.style.color = ""; msg.textContent = "Validando tu pergamino…";
+  try {
+    const r = await fetch(CUPONES_API + encodeURIComponent(code), { cache: "no-store" });
+    const o = await r.json();
+    if (o.valido) return ok({ tipo: "pct", valor: o.porcentaje / 100, desc: `${o.porcentaje}% de descuento` }, `Pergamino "${code}" aplicado: ${o.porcentaje}% de descuento (vence el ${fechaCupon(o.expira)}).`);
+    if (o.motivo === "usado") return mal(`El código "${code}" ya fue usado.`);
+    if (o.motivo === "vencido") return mal(`El código "${code}" venció el ${fechaCupon(o.expira)}.`);
+    return mal(o.error || `El código "${code}" no es válido.`);
+  } catch (e) {
+    return mal("No pudimos validar el código. Revisa tu conexión e intenta de nuevo.");
   }
-  renderTotales();
 }
 function renderCarrito() {
   $("#cartCount").textContent = carrito.length;
@@ -1769,6 +1779,14 @@ $("#okClose").addEventListener("click", () => $("#ok").close());
 
 /* ---------- Cupón de descuento ---------- */
 $("#cuponBtn").addEventListener("click", aplicarCupon);
+(function cuponDesdeLink() {
+  const code = new URLSearchParams(location.search).get("cupon");
+  if (!code) return;
+  $("#cuponInput").value = code.trim().toUpperCase().slice(0, 32);
+  aplicarCupon().then(() => {
+    if (cuponAplicado) toast(`¡Pergamino listo! El ${Math.round(cuponAplicado.valor * 100)}% se aplicará a tu pedido.`);
+  });
+})();
 $("#cuponInput").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); aplicarCupon(); } });
 
 /* ---------- RNC (DGII) → autocompletar Razón Social ----------
