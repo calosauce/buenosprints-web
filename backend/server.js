@@ -54,7 +54,9 @@ app.post("/api/pedidos", async (req, res) => {
     // El PDF se sirve desde esta misma API; el link de WhatsApp (con el
     // mensaje y los datos de pago ya armados) se calcula ANTES de avisarle
     // al taller, para poder incluirlo directo en ese correo.
-    const baseApi = process.env.BASE_URL || `${req.protocol}://${req.get("host")}`;
+    // Igual que lib/sheets.js: BASE_URL no está definido en Hostinger, así
+    // que el valor por defecto es el dominio real (siempre https).
+    const baseApi = process.env.BASE_URL || "https://api.buenosprints.com";
     const urlPdf = `${baseApi}/api/pedidos/${pedido.numero}/pdf`;
     const linkWa = linkWhatsApp(pedido, urlPdf);
 
@@ -163,7 +165,11 @@ app.get("/api/rastreo/:numero", async (req, res) => {
   if (!rastreoPermitido(req.ip)) {
     return res.status(429).json({ error: "Demasiadas consultas. Espera unos minutos e intenta de nuevo." });
   }
-  const numero = String(req.params.numero || "").trim().toUpperCase();
+  // Acepta el número con o sin ceros a la izquierda (BP-2026-720 =
+  // BP-2026-000720), igual que la página de rastreo.
+  const crudo = String(req.params.numero || "").trim().toUpperCase();
+  const m = crudo.match(/^BP-(\d{4})-(\d{1,6})$/);
+  const numero = m ? `BP-${m[1]}-${m[2].padStart(6, "0")}` : crudo;
   const tel = String(req.query.tel || "");
   const noEncontrado = () =>
     res.status(404).json({ error: "No encontramos un pedido con ese número y esos dígitos. Revisa los datos e intenta de nuevo." });
@@ -179,6 +185,12 @@ app.get("/api/rastreo/:numero", async (req, res) => {
   }
 });
 
-app.get("/api/health", (_req, res) => res.json({ ok: true }));
+app.get("/api/health", (req, res) => {
+  // TEMPORAL: diagnóstico de la IP que ve el limitador del rastreo.
+  res.set("X-Diag-Ip", String(req.ip || ""));
+  res.set("X-Diag-Xff", String(req.get("x-forwarded-for") || ""));
+  res.set("Access-Control-Expose-Headers", "X-Diag-Ip, X-Diag-Xff");
+  res.json({ ok: true });
+});
 
 app.listen(PORT, () => console.log(`Buenos Prints backend escuchando en :${PORT}`));
