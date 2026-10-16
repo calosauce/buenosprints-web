@@ -163,7 +163,7 @@ function generarPDFPedido(pedido, { esFactura = false } = {}) {
     // PDFKit mandaba cada línea del pie a una página nueva (los PDFs salían
     // con 5 páginas, 4 de ellas casi vacías).
     doc.page.margins.bottom = 0;
-    const yPie = 740;
+    const yPie = 722; // última línea (yPie + 48) termina ~782, dentro de los 792 de la hoja
     doc.font("Helvetica").fontSize(9).fillColor(NEGRO)
       .text("Cualquier duda o pregunta por favor escribirnos vía WhatsApp y/o correo.", MARGEN, yPie, { width: ANCHO_PAGINA - 2 * MARGEN, align: "center" });
     doc.text("849-577-9893 / buenosprints.taller@gmail.com", MARGEN, yPie + 14, { width: ANCHO_PAGINA - 2 * MARGEN, align: "center" });
