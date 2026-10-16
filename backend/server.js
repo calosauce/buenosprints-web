@@ -2,9 +2,9 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 
-const { crearPedido, obtenerPedido, marcarPagado, actualizarEstado, ESTADOS } = require("./lib/db");
+const { crearPedido, obtenerPedido, marcarPagado, actualizarEstado, ESTADOS, ESTADOS_PAGADOS } = require("./lib/db");
 const { generarPDFPedido } = require("./lib/pdf");
-const { enviarCotizacionAlTaller, enviarActualizacionAlCliente, enviarConfirmacionAlCliente, enviarRecordatorioCupon } = require("./lib/email");
+const { enviarCotizacionAlTaller, enviarActualizacionAlCliente, enviarConfirmacionAlCliente, enviarRecordatorioCupon, enviarComprobanteAlTaller } = require("./lib/email");
 const { telefonoCoincide, vistaPublica, crearLimitador } = require("./lib/rastreo");
 const { cuponParaPedido, consultarCupon, usarCupon, esCuponDeFidelidad, cuponesPorRecordar, reservarRecordatorio, liberarRecordatorio, diasEntre, hoyRD } = require("./lib/cupones");
 const { linkWhatsApp } = require("./lib/whatsapp");
@@ -154,33 +154,65 @@ app.post("/api/pedidos/:numero/estado", async (req, res) => {
   }
 
   try {
-    const pedido = await actualizarEstado(req.params.numero, estado);
-    if (!pedido) return res.status(404).json({ error: "Pedido no encontrado" });
-
-    // Pedido entregado → cupón de fidelidad (solo si hay correo para enviarlo).
-    let cupon = null;
-    if (estado === "entregado" && pedido.cliente_email) {
-      try {
-        cupon = await cuponParaPedido(pedido.numero);
-      } catch (err) {
-        console.error("No se pudo crear el cupón de fidelidad:", err.message);
-      }
-    }
-
-    let correoEnviado = false;
-    try {
-      const resultado = await enviarActualizacionAlCliente(pedido, estado, { cupon });
-      correoEnviado = Boolean(resultado?.ok);
-    } catch (err) {
-      console.error("No se pudo enviar el correo de actualización de estado:", err.message);
-    }
-
-    res.json({ ok: true, pedido, correoEnviado });
+    const resultado = await procesarCambioDeEstado(req.params.numero, estado);
+    if (!resultado) return res.status(404).json({ error: "Pedido no encontrado" });
+    res.json({ ok: true, ...resultado });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Error interno al actualizar el estado." });
   }
 });
+
+// Todo lo que pasa cuando el taller cambia el Estado de un pedido:
+// - Primera vez que queda PAGADO → se genera el comprobante de pago (PDF) y
+//   va adjunto al correo del cliente; el taller recibe una copia sobria para
+//   su archivo fiscal (también si el cliente no tiene correo).
+// - "Pagado - En producción" de nuevo → el correo vuelve a llevar el PDF.
+// - Entregado → cupón de fidelidad (si hay correo para enviarlo).
+async function procesarCambioDeEstado(numero, estado) {
+  const antes = await obtenerPedido(numero);
+  if (!antes) return null;
+  const pedido = await actualizarEstado(numero, estado);
+  const primerPago = ESTADOS_PAGADOS.includes(estado) && !antes.pagado_en;
+
+  let comprobante = null;
+  if (primerPago || estado === "pagado_produccion") {
+    try {
+      comprobante = await generarPDFPedido(pedido, { esFactura: true });
+    } catch (err) {
+      console.error("No se pudo generar el comprobante:", err.message);
+    }
+  }
+
+  let cupon = null;
+  if (estado === "entregado" && pedido.cliente_email) {
+    try {
+      cupon = await cuponParaPedido(pedido.numero);
+    } catch (err) {
+      console.error("No se pudo crear el cupón de fidelidad:", err.message);
+    }
+  }
+
+  let correoEnviado = false;
+  try {
+    const r = await enviarActualizacionAlCliente(pedido, estado, { cupon, comprobante });
+    correoEnviado = Boolean(r?.ok);
+  } catch (err) {
+    console.error("No se pudo enviar el correo de actualización de estado:", err.message);
+  }
+
+  let comprobanteAlTaller = false;
+  if (primerPago && comprobante) {
+    try {
+      await enviarComprobanteAlTaller(pedido, comprobante, { clienteNotificado: correoEnviado });
+      comprobanteAlTaller = true;
+    } catch (err) {
+      console.error("No se pudo enviar la copia del comprobante al taller:", err.message);
+    }
+  }
+
+  return { pedido, correoEnviado, comprobante: Boolean(comprobante), comprobanteAlTaller };
+}
 
 // Rastreo público (página buenosprints.com/rastreo). Pide el número de
 // pedido + los últimos 4 dígitos del WhatsApp del pedido; si no coinciden
@@ -228,6 +260,19 @@ app.get("/api/cupones/:codigo", async (req, res) => {
     console.error(err);
     res.status(500).json({ valido: false, error: "No se pudo validar el cupón." });
   }
+});
+
+// TEMPORAL — probar el cambio de estado (mismo proceso que el Sheet) con
+// pedidos de prueba (nombre "PRUEBA…" y correo = el del taller). Se elimina tras la prueba.
+app.post("/api/prueba/:numero/estado", async (req, res) => {
+  const { estado } = req.body || {};
+  if (!ESTADOS.includes(estado)) return res.status(400).json({ error: "Estado inválido." });
+  const actual = await obtenerPedido(req.params.numero);
+  const correoTaller = (process.env.TALLER_EMAIL || process.env.SMTP_USER || "").toLowerCase();
+  const esPrueba = actual && /^PRUEBA/i.test(actual.cliente_nombre || "") && (actual.cliente_email || "").toLowerCase() === correoTaller;
+  if (!esPrueba) return res.status(404).json({ error: "Solo pedidos de prueba." });
+  const r = await procesarCambioDeEstado(actual.numero, estado);
+  res.json({ ok: true, estado: r.pedido.estado, correoEnviado: r.correoEnviado, comprobante: r.comprobante, comprobanteAlTaller: r.comprobanteAlTaller });
 });
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));

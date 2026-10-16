@@ -315,7 +315,7 @@ ${contenido}
 </body></html>`;
 }
 
-function plantillaHTML(pedido, { preheader, titulo, intro, pasoActual, aviso, cuerpo, nota }) {
+function plantillaHTML(pedido, { preheader, titulo, intro, pasoActual, aviso, cuerpo, nota, comprobante }) {
   const linkRastreo = urlRastreo(pedido);
   const detalle = leerDetalle(pedido);
   return marcoHTML({
@@ -329,6 +329,8 @@ function plantillaHTML(pedido, { preheader, titulo, intro, pasoActual, aviso, cu
     ${pasoActual === null || pasoActual === undefined ? "" : pasosHTML(pasoActual)}
 
     ${cuerpo}
+
+    ${comprobante ? `<div style="background:#E3F6EC;border:2px solid ${C.ink};border-radius:14px;padding:12px 16px;margin:0 0 20px;font:15px/1.5 ${FUENTE};color:${C.ink}"><b>Adjuntamos tu comprobante de pago</b> en PDF, con el detalle de tu pedido y la fecha del pago. Guárdalo para tus registros.</div>` : ""}
 
     ${boton(linkRastreo, "Ver estado de mi pedido")}
     ${boton(linkWhatsAppTaller(pedido), "Escribirnos por WhatsApp", { fondo: C.paper, color: C.ink })}
@@ -429,7 +431,8 @@ const CORREOS = {
 
   pagado_produccion: {
     asunto: (p) => `Pedido ${p.numero} — ¡Pago confirmado, en producción!`,
-    html: (p) => plantillaHTML(p, {
+    html: (p, x = {}) => plantillaHTML(p, {
+      comprobante: Boolean(x.comprobante),
       preheader: `Confirmamos tu pago. Tu pedido ${p.numero} ya está en producción.`,
       titulo: `¡Pago confirmado${primerNombre(p) ? ", " + esc(primerNombre(p)) : ""}!`,
       intro: "Tu pedido ya está en producción",
@@ -445,9 +448,10 @@ const CORREOS = {
 
   listo_entrega: {
     asunto: (p) => `Pedido ${p.numero} — ¡Listo para entrega!`,
-    html: (p) => {
+    html: (p, x = {}) => {
       const tipo = leerDetalle(p).entrega?.tipo;
       return plantillaHTML(p, {
+        comprobante: Boolean(x.comprobante),
         preheader: `Tu pedido ${p.numero} está listo. Coordinemos la entrega.`,
         titulo: `¡Tu pedido está listo${primerNombre(p) ? ", " + esc(primerNombre(p)) : ""}!`,
         intro: "Ya terminamos tu pedido",
@@ -466,6 +470,7 @@ const CORREOS = {
       ? `Pedido ${p.numero} entregado — y un regalo para tu próxima aventura`
       : `Pedido ${p.numero} — Entregado`,
     html: (p, x = {}) => plantillaHTML(p, {
+      comprobante: Boolean(x.comprobante),
       preheader: x.cupon
         ? `Misión cumplida: tu pedido llegó. Te dejamos un pergamino de ${x.cupon.porcentaje}% para la próxima.`
         : `Tu pedido ${p.numero} fue entregado. ¡Gracias por preferirnos!`,
@@ -552,9 +557,57 @@ async function enviarCorreoCliente(pedido, clave, attachments = [], extra = {}) 
     to: pedido.cliente_email,
     replyTo: process.env.TALLER_EMAIL || process.env.SMTP_USER,
     subject: correo.asunto(pedido, extra),
-    text: `${correo.texto(pedido, extra)}\n\nSigue tu pedido: ${urlRastreo(pedido)}\n\n— Buenos Prints`,
+    text: `${correo.texto(pedido, extra)}${extra.comprobante ? "\n\nAdjuntamos tu comprobante de pago en PDF." : ""}\n\nSigue tu pedido: ${urlRastreo(pedido)}\n\n— Buenos Prints`,
     html: correo.html(pedido, extra),
-    attachments,
+    attachments: extra.comprobante
+      ? [...attachments, { filename: `Comprobante-${pedido.numero}.pdf`, content: extra.comprobante }]
+      : attachments,
+  });
+  return { ok: true };
+}
+
+// Copia del comprobante para el TALLER (archivo fiscal), en el formato sobrio
+// del taller. Se envía siempre la primera vez que el pedido queda pagado,
+// también cuando el cliente no tiene correo (para reenviárselo por WhatsApp).
+async function enviarComprobanteAlTaller(pedido, pdfBuffer, { clienteNotificado }) {
+  const d = leerDetalle(pedido);
+  const fechaPago = pedido.pagado_en ? new Date(pedido.pagado_en).toLocaleDateString("es-DO", { timeZone: "America/Santo_Domingo", day: "2-digit", month: "2-digit", year: "numeric" }) : "";
+  const estadoCliente = clienteNotificado
+    ? `Enviado al cliente (${esc(pedido.cliente_email)}).`
+    : `<b style="color:${C.accent}">El cliente no tiene correo:</b> reenvíale este PDF por WhatsApp.`;
+  const html = marcoHTML({
+    simple: true,
+    preheader: `${pedido.cliente_nombre || "Cliente"} · ${rd(pedido.total)} · pagado ${fechaPago}`,
+    tituloPagina: `Comprobante ${pedido.numero}`,
+    contenido: `<h1 style="margin:0 0 4px;font:800 24px/1.1 ${FUENTE_TITULO};color:${C.ink}">Comprobante de pago</h1>
+    <p style="margin:0 0 6px;font:16px/1.5 ${FUENTE};color:${C.ink}">${esc(pedido.cliente_nombre || "Cliente")} · <b>${rd(pedido.total)}</b></p>
+    <div style="display:inline-block;background:${C.sun};border:2px solid ${C.ink};border-radius:999px;padding:4px 16px;font:800 20px ${FUENTE};color:${C.ink};margin:0 0 16px">${esc(pedido.numero)}</div>
+    <p style="margin:0 0 14px;font:15px/1.5 ${FUENTE};color:${C.ink}">${estadoCliente}</p>
+    <table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:collapse">
+      ${filaDato("Fecha de pago", esc(fechaPago))}
+      ${filaDato("Total pagado", `<b>${rd(pedido.total)}</b>`)}
+      ${filaDato("Razón social", esc(pedido.cliente_razon_social || ""))}
+      ${filaDato("RNC/Cédula", esc(pedido.cliente_rnc || ""))}
+      ${filaDato("Cupón", d.cupon && d.cupon.codigo ? esc(d.cupon.codigo) : "")}
+      ${filaDato("e-CF", esc(pedido.ecf_numero || ""))}
+    </table>
+    <p style="margin:16px 0 0;font:13px/1.5 ${FUENTE};color:${C.muted}">Adjunto: el comprobante en PDF, para el archivo del taller.</p>`,
+  });
+  const transportador = crearTransportador();
+  await transportador.sendMail({
+    from: { name: "Buenos Prints — Pedidos", address: process.env.SMTP_USER },
+    to: process.env.TALLER_EMAIL || process.env.SMTP_USER,
+    subject: `Comprobante ${pedido.numero} · ${rd(pedido.total)} · ${pedido.cliente_nombre || "Cliente"}`,
+    text: [
+      `Comprobante de pago ${pedido.numero}`, "",
+      `Cliente: ${pedido.cliente_nombre || "-"}`,
+      pedido.cliente_razon_social ? `Razón social: ${pedido.cliente_razon_social}` : null,
+      pedido.cliente_rnc ? `RNC/Cédula: ${pedido.cliente_rnc}` : null,
+      `Fecha de pago: ${fechaPago}`, `Total pagado: ${rd(pedido.total)}`, "",
+      clienteNotificado ? `Enviado al cliente (${pedido.cliente_email}).` : "El cliente no tiene correo: reenvíale este PDF por WhatsApp.",
+    ].filter((x) => x !== null).join("\n"),
+    html,
+    attachments: [{ filename: `Comprobante-${pedido.numero}.pdf`, content: pdfBuffer }],
   });
   return { ok: true };
 }
@@ -581,6 +634,7 @@ module.exports = {
   // expuestos para pruebas / vista previa
   enviarRecordatorioCupon,
   htmlRecordatorio,
+  enviarComprobanteAlTaller,
   CORREOS,
   pasosHTML,
   htmlTaller,

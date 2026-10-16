@@ -19,6 +19,10 @@ function money(centavos) {
   return `RD$${(centavos / 100).toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+function fechaCorta(valor) {
+  return new Date(valor).toLocaleDateString("es-DO", { day: "2-digit", month: "2-digit", year: "2-digit", timeZone: "America/Santo_Domingo" });
+}
+
 function generarPDFPedido(pedido, { esFactura = false } = {}) {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: "LETTER", margin: MARGEN });
@@ -41,8 +45,11 @@ function generarPDFPedido(pedido, { esFactura = false } = {}) {
     doc.font("Helvetica").fontSize(10).fillColor(NEGRO)
       .text("Tel: 849-577-9893", MARGEN, MARGEN + 48);
 
-    doc.font("Helvetica-Bold").fontSize(22).fillColor(ROJO)
-      .text(esFactura ? "COMPROBANTE" : "COTIZACION", xDer - 40, MARGEN - 4, { width: anchoDer + 40, align: "right" });
+    // Pagado: "COMPROBANTE DE PAGO" mientras no haya e-CF; el día que DGII
+    // habilite el e-CF (pedido.ecf_numero), el mismo documento pasa a "FACTURA".
+    const titulo = !esFactura ? "COTIZACION" : pedido.ecf_numero ? "FACTURA" : "COMPROBANTE DE PAGO";
+    doc.font("Helvetica-Bold").fontSize(titulo.length > 12 ? 17 : 22).fillColor(ROJO)
+      .text(titulo, xDer - 60, MARGEN - 4 + (titulo.length > 12 ? 4 : 0), { width: anchoDer + 60, align: "right" });
 
     let yCaja = MARGEN + 34;
     const filaCaja = (etiqueta, valor) => {
@@ -51,9 +58,10 @@ function generarPDFPedido(pedido, { esFactura = false } = {}) {
       doc.font("Helvetica").fontSize(9).fillColor(NEGRO).text(valor, xDer + 84, yCaja + 3);
       yCaja += 20;
     };
-    filaCaja("FECHA:", fecha);
-    filaCaja(esFactura ? "COMPROBANTE #" : "COTIZACION #", pedido.numero);
-    if (esFactura) filaCaja("e-CF:", pedido.ecf_numero || "— pendiente DGII —");
+    filaCaja(esFactura ? "FECHA PEDIDO:" : "FECHA:", fecha);
+    if (esFactura && pedido.pagado_en) filaCaja("FECHA PAGO:", fechaCorta(pedido.pagado_en));
+    filaCaja(esFactura ? (pedido.ecf_numero ? "FACTURA #" : "COMPROBANTE #") : "COTIZACION #", pedido.numero);
+    if (esFactura && pedido.ecf_numero) filaCaja("e-CF:", pedido.ecf_numero);
 
     // ---- Banda CLIENTE ----
     let y = MARGEN + 100;
@@ -61,11 +69,26 @@ function generarPDFPedido(pedido, { esFactura = false } = {}) {
     doc.font("Helvetica-Bold").fontSize(10).fillColor("#FFFFFF").text("CLIENTE", MARGEN + 8, y + 4);
     y += 26;
     doc.font("Helvetica").fontSize(10).fillColor(NEGRO);
+    const yCliente = y;
     doc.text(pedido.cliente_nombre || "-", MARGEN, y);
     y += 16;
+    // Razón social y RNC: necesarios para que el cliente pueda usar el
+    // documento con fines fiscales (crédito fiscal) cuando aplique.
+    if (pedido.cliente_razon_social) { doc.text(`Razón social: ${pedido.cliente_razon_social}`, MARGEN, y); y += 14; }
+    if (pedido.cliente_rnc) { doc.text(`RNC/Cédula: ${pedido.cliente_rnc}`, MARGEN, y); y += 14; }
     if (pedido.cliente_telefono) { doc.text(`Tel/Whatsapp: ${pedido.cliente_telefono}`, MARGEN, y); y += 14; }
     doc.text(`Email: ${pedido.cliente_email || "N/A"}`, MARGEN, y);
     y += 24;
+
+    // Sello "PAGADO" a la derecha del bloque del cliente.
+    if (esFactura) {
+      const sx = ANCHO_PAGINA - MARGEN - 150, sy = yCliente + 2;
+      doc.save();
+      doc.rotate(-10, { origin: [sx + 70, sy + 20] });
+      doc.lineWidth(3).roundedRect(sx, sy, 140, 40, 6).strokeColor(ROJO).stroke();
+      doc.font("Helvetica-Bold").fontSize(24).fillColor(ROJO).text("PAGADO", sx, sy + 9, { width: 140, align: "center", characterSpacing: 2 });
+      doc.restore();
+    }
 
     // ---- Tabla de items ----
     const colDescW = 360, colCantW = 70, colSubW = ANCHO_PAGINA - 2 * MARGEN - colDescW - colCantW;
@@ -99,12 +122,16 @@ function generarPDFPedido(pedido, { esFactura = false } = {}) {
     doc.font("Helvetica-Bold").fontSize(10).fillColor("#FFFFFF").text("COMENTARIOS", MARGEN + 8, yComentarios + 4);
     let yc = yComentarios + 26;
     doc.font("Helvetica").fontSize(8.7).fillColor(NEGRO);
-    const comentarios = detalle.comentarios || [
+    const comentarios = detalle.comentarios || (esFactura ? [
+      `Pago recibido${pedido.pagado_en ? " el " + fechaCorta(pedido.pagado_en) : ""}. ¡Gracias!`,
+      "Producción en 2 a 3 días laborables luego de aprobar la prueba digital.",
+      "Conserva este comprobante para cualquier consulta o garantía.",
+    ] : [
       "Se coloca la orden con el 50% de avance.",
       "Se inicia la orden luego de aprobación de la prueba digital (foto).",
       "48-72 hrs para entrega.",
       "Envío gratis en órdenes de monto igual o superior a RD$5,000.00.",
-    ];
+    ]);
     comentarios.forEach((c, i) => {
       doc.text(`${i + 1}. ${c}`, MARGEN, yc, { width: 320 });
       yc += doc.heightOfString(`${i + 1}. ${c}`, { width: 320 }) + 6;
