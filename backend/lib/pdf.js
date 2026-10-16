@@ -53,14 +53,14 @@ function generarPDFPedido(pedido, { esFactura = false } = {}) {
 
     let yCaja = MARGEN + 34;
     const filaCaja = (etiqueta, valor) => {
-      doc.font("Helvetica-Bold").fontSize(9).fillColor(NEGRO).text(etiqueta, xDer, yCaja + 3, { width: 78 });
+      doc.font("Helvetica-Bold").fontSize(9).fillColor(NEGRO).text(etiqueta, xDer - 6, yCaja + 3, { width: 84, lineBreak: false });
       doc.rect(xDer + 80, yCaja, anchoDer - 80, 16).fillAndStroke("#F4F4F6", "#CCCCCC");
       doc.font("Helvetica").fontSize(9).fillColor(NEGRO).text(valor, xDer + 84, yCaja + 3);
       yCaja += 20;
     };
     filaCaja(esFactura ? "FECHA PEDIDO:" : "FECHA:", fecha);
     if (esFactura && pedido.pagado_en) filaCaja("FECHA PAGO:", fechaCorta(pedido.pagado_en));
-    filaCaja(esFactura ? (pedido.ecf_numero ? "FACTURA #" : "COMPROBANTE #") : "COTIZACION #", pedido.numero);
+    filaCaja(esFactura ? (pedido.ecf_numero ? "FACTURA #" : "COMPROBANTE:") : "COTIZACION #", pedido.numero);
     if (esFactura && pedido.ecf_numero) filaCaja("e-CF:", pedido.ecf_numero);
 
     // ---- Banda CLIENTE ----
@@ -159,6 +159,10 @@ function generarPDFPedido(pedido, { esFactura = false } = {}) {
     filaTotal(esFactura ? "TOTAL PAGADO" : "TOTAL", money(pedido.total), true);
 
     // ---- Pie de página ----
+    // El pie va por debajo del margen inferior (750). Sin quitar ese margen,
+    // PDFKit mandaba cada línea del pie a una página nueva (los PDFs salían
+    // con 5 páginas, 4 de ellas casi vacías).
+    doc.page.margins.bottom = 0;
     const yPie = 740;
     doc.font("Helvetica").fontSize(9).fillColor(NEGRO)
       .text("Cualquier duda o pregunta por favor escribirnos vía WhatsApp y/o correo.", MARGEN, yPie, { width: ANCHO_PAGINA - 2 * MARGEN, align: "center" });
