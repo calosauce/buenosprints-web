@@ -1628,7 +1628,8 @@ const waLink = msg => `https://wa.me/${CONFIG.WHATSAPP}?text=${encodeURIComponen
 // Producto, Dimensiones, Cantidad, Descuento aplicado, Subtotal, ITBIS desglosado y Total neto.
 function construirMensajeWhatsApp(id, p) {
   // Formato de WhatsApp: *texto* = negrita. Sin emojis en el detalle; solo el
-  // camioncito del encabezado y el ✅ en los totales.
+  // camioncito del encabezado, el ⚡ del RUSH (para que salte a la vista) y
+  // el ✅ en los totales.
   const lineas = [`🛻 *Pedido ${id} — Buenos Prints*`, ""];
   p.items.forEach((it, i) => {
     const fiscal = desgloseFiscal(it.subtotal);
@@ -1645,7 +1646,7 @@ function construirMensajeWhatsApp(id, p) {
   lineas.push("———————————————");
   lineas.push(`*ITBIS total (18%):* ${fmt2(fiscalTotal.itbis)}`);
   if (p.cupon) lineas.push(`*Cupón ${p.cupon.codigo}:* -${fmt(p.cupon.descuento)}`);
-  if (p.rush) lineas.push(`*Servicio RUSH (entrega en ${p.rush.horas}h):* ${fmt(p.rush.costo)}`);
+  if (p.rush) lineas.push(`⚡ *Servicio RUSH (entrega en ${p.rush.horas}h):* ${fmt(p.rush.costo)}`);
   if (p.envio) lineas.push(`*Entrega:* ${fmt(p.envio)}`);
   lineas.push(`✅ *TOTAL NETO A PAGAR: ${fmt(p.total)}*`);
   lineas.push("");
