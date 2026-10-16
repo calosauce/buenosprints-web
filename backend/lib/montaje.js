@@ -12,6 +12,9 @@
 const PDFDocument = require("pdfkit");
 
 const PT = 72;
+// Igual que la vista previa: cada pieza es el tamaño de CORTE y el diseño va
+// 8 pt hacia adentro (espacio del borde blanco), con su proporción, centrado.
+const BORDE_PT = 8;
 const ROJO = "#EF4136";
 const NEGRO = "#1A1A1A";
 
@@ -38,7 +41,10 @@ function generarMontajePDF(item, { numero, indice = 1 } = {}) {
 
     // ---- Página 1: la hoja ----
     for (const p of m.piezas || []) {
-      const x = p.x * PT, y = p.y * PT, w = p.w * PT, h = p.h * PT;
+      const iw = Math.max(1, p.w * PT - 2 * BORDE_PT), ih = Math.max(1, p.h * PT - 2 * BORDE_PT);
+      const r = p.w / p.h;
+      const w = iw / ih > r ? ih * r : iw, h = iw / ih > r ? ih : iw / r;
+      const x = p.x * PT + (p.w * PT - w) / 2, y = p.y * PT + (p.h * PT - h) / 2;
       const im = imagenes[p.d];
       if (!im) {
         doc.save().lineWidth(0.5).dash(3, { space: 3 }).rect(x, y, w, h).stroke("#999").undash().restore();
@@ -64,6 +70,7 @@ function generarMontajePDF(item, { numero, indice = 1 } = {}) {
     fila("Stickers por hoja", `${(m.piezas || []).length}, lado mayor ${m.tam}"`);
     fila("Separación entre stickers", `${m.separacion}"`);
     fila("Borde de la hoja", `${m.margen}"`);
+    fila("Borde blanco de cada sticker", `${BORDE_PT} pt (cada diseño está colocado ${BORDE_PT} pt hacia adentro de su espacio de corte)`);
     fila("Cantidad de hojas", item.cantidad);
     if (item.material) fila("Material", item.material);
     doc.moveDown(0.8);

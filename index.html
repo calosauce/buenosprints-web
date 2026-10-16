@@ -318,6 +318,10 @@ select{cursor:pointer}
 .stage.f-redondeado .pv .ph{border-radius:10%}
 .stage.f-cuadrado .pv,.stage.f-cuadrado .pv .ph{border-radius:2px}
 .stage.f-contorno .pv img,.stage.f-contorno .pv .ph{filter:var(--matf) drop-shadow(3px 0 0 #fff) drop-shadow(-3px 0 0 #fff) drop-shadow(0 3px 0 #fff) drop-shadow(0 -3px 0 #fff) drop-shadow(0 7px 8px rgba(0,0,0,.4))}
+/* Con un diseño subido: borde blanco de 8 pt que sigue la silueta + línea de corte fucsia (filtro #corteUnico) */
+.stage.f-contorno .pv img.con-corte{filter:var(--matf) url(#corteUnico) drop-shadow(0 7px 8px rgba(0,0,0,.4))}
+/* Formas fijas (círculo, cuadrado, redondeado): el papel ya es el borde; la línea de corte va en su contorno */
+.stage:not(.f-contorno):not(.hoja-armada) .pv{box-shadow:0 0 0 1px #FF1FA8,0 8px 16px rgba(0,0,0,.35)}
 .stage.f-contorno .pv .ph{border-radius:42% 58% 55% 45%/52% 44% 56% 48%}
 .stage.f-contorno .pv .sheen{-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center}
 /* Hojas de stickers: lista de diseños (paso 1) y hoja armada (vista previa) */
@@ -339,8 +343,12 @@ select{cursor:pointer}
 .hquitar:hover{background:var(--bad-bg);color:var(--ink)}
 .hacts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .pvhoja{position:absolute;inset:0}
-.hpz{position:absolute;overflow:hidden}
-.hpz img{position:absolute;max-width:none;display:block;filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.35))}
+/* Cada pieza = tamaño de CORTE. Adentro, el diseño va 8 pt hacia dentro
+   (.hpzin, que recorta los bordes transparentes); el filtro #corteHoja dibuja
+   el borde blanco hasta el límite de la pieza y la línea fucsia ahí. */
+.hpz{position:absolute;filter:url(#corteHoja)}
+.hpzin{position:absolute;overflow:hidden}
+.hpzin img{position:absolute;max-width:none;display:block}
 .stage.hoja-armada .pv{padding:0}
 .stage.hoja-armada .pv > img,.stage.hoja-armada .pv > .ph{display:none!important}
 .dimtag{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.55);color:#fff;font-weight:700;font-size:13px;border-radius:999px;padding:3px 12px;white-space:nowrap}
@@ -790,6 +798,8 @@ dialog::backdrop{background:rgba(23,20,15,.55)}
 </a>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<!-- Filtros de la vista previa del corte (borde blanco + línea fucsia), se generan en JS -->
+<svg width="0" height="0" style="position:absolute;width:0;height:0" aria-hidden="true" focusable="false"><defs id="filtrosCorte"></defs></svg>
 
 <dialog id="ok">
   <div class="dlg">
@@ -959,6 +969,9 @@ const CONFIG = {
     MAX_DISENOS: 24,
     MAX_STICKERS: 200,
   },
+  // Vista previa del corte: borde blanco alrededor de la silueta y la línea
+  // de corte (simulación; el corte real se confirma en la prueba digital).
+  CORTE: { BORDE_PT: 8, LINEA_PT: 1, COLOR: "#FF1FA8" },
   MAX_MB_ARCHIVO: 15,
   MAX_MB_TOTAL: 35,
 };
@@ -1279,6 +1292,9 @@ function updatePreview() {
 
   const img = $("#pvImg"), ph = $("#ph"), sheen = $("#sheen");
   const vista = vistaUnica();
+  // Borde blanco de 8 pt + línea de corte, a la escala de la vista previa (S px por pulgada).
+  ponerFiltro("corteUnico", ptAPulg(CONFIG.CORTE.BORDE_PT) * S, Math.max(1, ptAPulg(CONFIG.CORTE.LINEA_PT) * S));
+  img.classList.toggle("con-corte", Boolean(vista));
   if (vista) {
     if (img.getAttribute("src") !== vista) img.src = vista;
     img.hidden = false; ph.hidden = true;
@@ -1748,7 +1764,7 @@ function renderListaHoja() {
     let calidad = "";
     if (h && h.cabe && d.listo && d.ext !== "svg" && d.natW) {
       const [x0, y0, x1, y1] = d.recorte;
-      const med = medidasSticker(h.s, d.ratio);
+      const med = areaDiseno(medidasSticker(h.s, d.ratio), d.ratio);
       const dpi = Math.round(Math.min(((x1 - x0) * d.natW) / med.w, ((y1 - y0) * d.natH) / med.h));
       calidad = dpi >= 300 ? `<span class="hq ok">${dpi} dpi</span>` : dpi >= 150 ? `<span class="hq mid">${dpi} dpi</span>` : `<span class="hq low">${dpi} dpi · baja</span>`;
     } else if (d.ext === "svg") calidad = `<span class="hq ok">Vectorial</span>`;
@@ -1776,6 +1792,41 @@ function renderListaHoja() {
   box.hidden = false;
 }
 
+// Dentro de una pieza (tamaño de corte), el área del diseño: 8 pt hacia
+// adentro por cada lado, conservando su proporción y centrado (pulgadas,
+// relativo a la pieza). Lo mismo usa el montaje en PDF del servidor.
+function areaDiseno(p, ratio) {
+  const b = ptAPulg(CONFIG.CORTE.BORDE_PT);
+  const iw = Math.max(0.05, p.w - 2 * b), ih = Math.max(0.05, p.h - 2 * b);
+  const w = iw / ih > ratio ? ih * ratio : iw, h = iw / ih > ratio ? ih : iw / ratio;
+  return { x: (p.w - w) / 2, y: (p.h - h) / 2, w, h };
+}
+
+// Filtro SVG: borde blanco de r px alrededor de la silueta (dilatación del
+// canal alfa, suavizada) + anillo fucsia de l px justo afuera del borde.
+function filtroCorte(id, r, l) {
+  const suave = v => `<feGaussianBlur stdDeviation="${Math.max(0.35, v * 0.12).toFixed(2)}"/><feComponentTransfer><feFuncA type="linear" slope="4" intercept="-1.4"/></feComponentTransfer>`;
+  return `<filter id="${id}" x="-30%" y="-30%" width="160%" height="160%" color-interpolation-filters="sRGB">
+    <feMorphology in="SourceAlpha" operator="dilate" radius="${r.toFixed(2)}"/>${suave(r)}<feComposite operator="over" in2="SourceAlpha" result="borde"/>
+    <feMorphology in="SourceAlpha" operator="dilate" radius="${(r + l).toFixed(2)}"/>${suave(r + l)}<feComposite operator="over" in2="SourceAlpha" result="exterior"/>
+    <feComposite in="exterior" in2="borde" operator="out" result="anillo"/>
+    <feFlood flood-color="${CONFIG.CORTE.COLOR}"/><feComposite in2="anillo" operator="in" result="linea"/>
+    <feFlood flood-color="#FFFFFF"/><feComposite in2="borde" operator="in" result="blanco"/>
+    <feMerge><feMergeNode in="blanco"/><feMergeNode in="linea"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>`;
+}
+const filtrosActuales = {};
+function ponerFiltro(id, r, l) {
+  const clave = `${r.toFixed(2)}|${l.toFixed(2)}`;
+  if (filtrosActuales[id] === clave) return;
+  filtrosActuales[id] = clave;
+  const defs = $("#filtrosCorte");
+  const viejo = defs.querySelector("#" + id);
+  if (viejo) viejo.remove();
+  defs.insertAdjacentHTML("beforeend", filtroCorte(id, r, l));
+}
+const ptAPulg = pt => pt / 72;
+
 // Vista previa de la hoja armada (dentro de #pv).
 function renderHojaPreview() {
   const cont = $("#pvHoja");
@@ -1783,12 +1834,18 @@ function renderHojaPreview() {
   const h = state.hoja;
   if (!esHojas() || !state.disenos.length || !h || !h.cabe) { cont.hidden = true; cont.innerHTML = ""; return false; }
   const W = state.w, H = state.h;
+  // Borde blanco y línea de corte a la escala de la vista previa (px por pulgada).
+  const pxPorPulg = ($("#pv").clientWidth || 0) / W || 30;
+  const bIn = ptAPulg(CONFIG.CORTE.BORDE_PT);
+  ponerFiltro("corteHoja", bIn * pxPorPulg, Math.max(1, ptAPulg(CONFIG.CORTE.LINEA_PT) * pxPorPulg));
   cont.innerHTML = h.piezas.map(p => {
     const d = state.disenos[p.d];
     const [x0, y0, x1, y1] = d.recorte;
     const fw = x1 - x0, fh = y1 - y0;
+    const a = areaDiseno(p, d.ratio);
     return `<div class="hpz" style="left:${(p.x / W) * 100}%;top:${(p.y / H) * 100}%;width:${(p.w / W) * 100}%;height:${(p.h / H) * 100}%">
-      <img src="${vistaDe(d)}" alt="" style="width:${100 / fw}%;height:${100 / fh}%;left:${(-x0 / fw) * 100}%;top:${(-y0 / fh) * 100}%"></div>`;
+      <div class="hpzin" style="left:${(a.x / p.w) * 100}%;top:${(a.y / p.h) * 100}%;width:${(a.w / p.w) * 100}%;height:${(a.h / p.h) * 100}%">
+      <img src="${vistaDe(d)}" alt="" style="width:${100 / fw}%;height:${100 / fh}%;left:${(-x0 / fw) * 100}%;top:${(-y0 / fh) * 100}%"></div></div>`;
   }).join("");
   cont.hidden = false;
   return true;
