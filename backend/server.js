@@ -8,6 +8,7 @@ const { enviarCotizacionAlTaller, enviarActualizacionAlCliente, enviarConfirmaci
 const { telefonoCoincide, vistaPublica, crearLimitador } = require("./lib/rastreo");
 const { cuponParaPedido, consultarCupon, usarCupon, esCuponDeFidelidad, cuponesPorRecordar, reservarRecordatorio, liberarRecordatorio, diasEntre, hoyRD } = require("./lib/cupones");
 const { linkWhatsApp } = require("./lib/whatsapp");
+const { generarMontajePDF } = require("./lib/montaje");
 const { registrarPedidoEnSheet } = require("./lib/sheets");
 
 const app = express();
@@ -44,9 +45,22 @@ app.post("/api/pedidos", async (req, res) => {
         filename: it.archivo.nombre || it.nombreArchivo || `diseno-${i + 1}`,
         content: Buffer.from(it.archivo.base64, "base64"),
       }));
+    // Hojas de stickers: varios diseños por ítem (it.archivos). Los originales
+    // también van adjuntos al taller, numerados por hoja.
+    let numHoja = 0;
+    for (const it of items) {
+      if (!Array.isArray(it.archivos) || !it.archivos.length) continue;
+      numHoja++;
+      it.archivos.forEach((a, k) => {
+        if (a && a.base64) archivosAdjuntos.push({ filename: `hoja${numHoja}-${k + 1}-${a.nombre || "diseno"}`, content: Buffer.from(a.base64, "base64") });
+      });
+    }
+    // Lo que se guarda en la base: sin binarios (de las hojas quedan solo el
+    // nombre y las copias de cada diseño, y el acomodo).
     const detalleLiviano = {
       ...detalle,
-      items: items.map(({ archivo, ...resto }) => resto),
+      items: items.map(({ archivo, archivos, ...resto }) =>
+        Array.isArray(archivos) ? { ...resto, archivos: archivos.map((a) => ({ nombre: a.nombre, copias: a.copias })) } : resto),
     };
 
     const pedido = await crearPedido({ cliente: cliente || {}, detalle: detalleLiviano, subtotal, total });
@@ -77,10 +91,26 @@ app.post("/api/pedidos", async (req, res) => {
     const urlPdf = `${baseApi}/api/pedidos/${pedido.numero}/pdf`;
     const linkWa = linkWhatsApp(pedido, urlPdf);
 
+    // Montaje a tamaño real de cada hoja de stickers (para el taller).
+    const montajes = [];
+    let k = 0;
+    for (const it of items) {
+      if (!it.montaje || !Array.isArray(it.archivos) || !it.archivos.length) continue;
+      k++;
+      try {
+        if (!montajeValido(it.montaje)) throw new Error("acomodo inválido");
+        const buf = await generarMontajePDF(it, { numero: pedido.numero, indice: k });
+        montajes.push({ filename: `Montaje-${pedido.numero}-hoja${k}.pdf`, content: buf });
+      } catch (err) {
+        console.error("Montaje:", err.message);
+        avisosExtra.push(`<b>Montaje no generado</b> para la hoja ${k}: arma la hoja con los archivos adjuntos.`);
+      }
+    }
+
     // El correo al taller es automático y no depende de nada más.
     let correoEnviado = true;
     try {
-      await enviarCotizacionAlTaller(pedido, pdfBuffer, linkWa, archivosAdjuntos, avisosExtra);
+      await enviarCotizacionAlTaller(pedido, pdfBuffer, linkWa, archivosAdjuntos, avisosExtra, montajes);
     } catch (err) {
       correoEnviado = false;
       console.error("No se pudo enviar el correo al taller:", err.message);
@@ -112,6 +142,16 @@ app.post("/api/pedidos", async (req, res) => {
     res.status(500).json({ error: "Error interno al crear el pedido." });
   }
 });
+
+// El acomodo viene del navegador: se revisa antes de dibujarlo (números
+// razonables, sin piezas fuera de la hoja) para no generar un PDF absurdo.
+function montajeValido(m) {
+  const n = (v) => typeof v === "number" && isFinite(v);
+  if (!m || !m.hoja || !n(m.hoja.w) || !n(m.hoja.h) || m.hoja.w <= 0 || m.hoja.h <= 0 || m.hoja.w > 24 || m.hoja.h > 24) return false;
+  if (!Array.isArray(m.piezas) || !m.piezas.length || m.piezas.length > 300) return false;
+  return m.piezas.every((p) => p && Number.isInteger(p.d) && p.d >= 0 && n(p.x) && n(p.y) && n(p.w) && n(p.h)
+    && p.w > 0 && p.h > 0 && p.x >= -0.01 && p.y >= -0.01 && p.x + p.w <= m.hoja.w + 0.01 && p.y + p.h <= m.hoja.h + 0.01);
+}
 
 // Sirve el PDF de un pedido ya creado (para el link que se manda por WhatsApp/correo).
 app.get("/api/pedidos/:numero/pdf", async (req, res) => {
@@ -260,6 +300,17 @@ app.get("/api/cupones/:codigo", async (req, res) => {
     console.error(err);
     res.status(500).json({ valido: false, error: "No se pudo validar el cupón." });
   }
+});
+
+// TEMPORAL — devuelve el montaje en PDF de un ítem enviado, para revisarlo
+// visualmente. No guarda nada. Se elimina tras la prueba.
+app.post("/api/prueba/montaje", async (req, res) => {
+  try {
+    const it = req.body || {};
+    if (!montajeValido(it.montaje) || !Array.isArray(it.archivos)) return res.status(400).json({ error: "inválido" });
+    const buf = await generarMontajePDF(it, { numero: "PRUEBA", indice: 1 });
+    res.json({ pdf64: buf.toString("base64") });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));

@@ -320,6 +320,27 @@ select{cursor:pointer}
 .stage.f-contorno .pv img,.stage.f-contorno .pv .ph{filter:var(--matf) drop-shadow(3px 0 0 #fff) drop-shadow(-3px 0 0 #fff) drop-shadow(0 3px 0 #fff) drop-shadow(0 -3px 0 #fff) drop-shadow(0 7px 8px rgba(0,0,0,.4))}
 .stage.f-contorno .pv .ph{border-radius:42% 58% 55% 45%/52% 44% 56% 48%}
 .stage.f-contorno .pv .sheen{-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center}
+/* Hojas de stickers: lista de diseños (paso 1) y hoja armada (vista previa) */
+.hlist{margin-top:14px;border:2px solid var(--ink);border-radius:16px;background:var(--paper);padding:12px}
+.hhead{font-size:14.5px;margin-bottom:8px}
+.halert{color:var(--accent);font-weight:700}
+.hrow{display:grid;grid-template-columns:44px minmax(0,1fr) auto 32px;gap:10px;align-items:center;padding:8px 0;border-top:1px dashed var(--line)}
+.hthumb{width:44px;height:44px;border-radius:10px;border:1.5px solid var(--line);background:var(--bg) center/contain no-repeat}
+.hmeta b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hmeta small{display:block;font-size:12.5px;color:var(--muted)}
+.hq.ok{color:var(--ok-fg)}.hq.mid{color:#9A6B00}.hq.low{color:var(--accent);font-weight:700}
+.hcopias{display:inline-flex;align-items:center;border:2px solid var(--ink);border-radius:999px;overflow:hidden}
+.hcopias button{border:0;background:var(--paper);color:var(--ink);width:32px;height:30px;font:700 17px var(--body);cursor:pointer}
+.hcopias button:disabled{opacity:.35;cursor:default}
+.hcopias span{min-width:28px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums}
+.hquitar{border:0;background:none;color:var(--muted);font-size:16px;cursor:pointer;width:32px;height:32px;border-radius:50%}
+.hquitar:hover{background:var(--bad-bg);color:var(--ink)}
+.hacts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.pvhoja{position:absolute;inset:0}
+.hpz{position:absolute;overflow:hidden}
+.hpz img{position:absolute;max-width:none;display:block;filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.35))}
+.stage.hoja-armada .pv{padding:0}
+.stage.hoja-armada .pv > img,.stage.hoja-armada .pv > .ph{display:none!important}
 .dimtag{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.55);color:#fff;font-weight:700;font-size:13px;border-radius:999px;padding:3px 12px;white-space:nowrap}
 .quality{position:absolute;top:12px;left:12px;right:12px;display:flex;justify-content:center}
 .quality span{background:var(--paper);border:2px solid var(--ink);border-radius:999px;font-size:12.5px;font-weight:700;padding:3px 10px}
@@ -570,7 +591,7 @@ dialog::backdrop{background:rgba(23,20,15,.55)}
           <small id="stepsProgLabel">Paso 1 de 6</small>
         </div>
         <div class="step" id="stepFile">
-          <div class="step-h"><span class="n">1</span><h3>Sube tu diseño</h3></div>
+          <div class="step-h"><span class="n">1</span><h3 id="stepFileTitulo">Sube tu diseño</h3></div>
           <label class="drop" id="drop">
             <input type="file" id="file" hidden accept=".png,.jpg,.jpeg,.webp,.svg,.pdf,.ai,.eps,.psd">
             <div id="dropEmpty">
@@ -583,7 +604,9 @@ dialog::backdrop{background:rgba(23,20,15,.55)}
               <button type="button" class="btn sm ghost" id="fRemove">Quitar</button>
             </div>
           </label>
-          <p class="hint">Ideal: PNG con fondo transparente a 300 dpi, o PDF / AI / SVG. Máximo <span class="maxmb"></span> MB por archivo.</p>
+          <div class="hlist" id="hojaLista" hidden aria-live="polite"></div>
+          <p class="hint" id="fileHint">Ideal: PNG con fondo transparente a 300 dpi, o PDF / AI / SVG. Máximo <span class="maxmb"></span> MB por archivo.</p>
+          <p class="hint" id="fileHintHoja" hidden>Sube cada diseño por separado: PNG con fondo transparente a 300 dpi (ideal), JPG, WEBP o SVG. Máximo <span class="maxmb"></span> MB por archivo. ¿Ya tienes la hoja armada en PDF o AI? Pega el enlace abajo.</p>
           <details class="alt" id="altBox">
             <summary>¿Tu archivo pesa mucho? Pega un enlace de Google Drive o WeTransfer</summary>
             <input type="url" id="enlace" placeholder="https://drive.google.com/…">
@@ -614,7 +637,7 @@ dialog::backdrop{background:rgba(23,20,15,.55)}
             <div><label for="ch">Alto (<span class="ulabel">pulg</span>)</label><input type="number" id="ch" step="0.1" inputmode="decimal"></div>
             <p class="hint" style="flex-basis:100%" id="customHint"></p>
           </div>
-          <p class="hint">El tamaño es el área máxima que ocupará tu diseño; el corte sigue su forma dentro de esa medida.</p>
+          <p class="hint" id="tamanoHint">El tamaño es el área máxima que ocupará tu diseño; el corte sigue su forma dentro de esa medida.</p>
         </div>
 
         <div class="step">
@@ -635,6 +658,7 @@ dialog::backdrop{background:rgba(23,20,15,.55)}
             <div class="pv" id="pv">
               <div class="ph" id="ph">TU DISEÑO</div>
               <img id="pvImg" alt="Vista previa de tu diseño" hidden>
+              <div class="pvhoja" id="pvHoja" hidden></div>
               <div class="sheen" id="sheen"></div>
             </div>
             <div class="dimtag" id="dimtag"></div>
@@ -924,6 +948,14 @@ const CONFIG = {
   },
 
   FORMATOS: ["png","jpg","jpeg","webp","svg","pdf","ai","eps","psd"],
+  // Hojas de stickers: acomodo automático de varios diseños en la hoja.
+  HOJA: {
+    MIN_STICKER: 1.5,   // pulgadas: ningún sticker puede quedar menor de 1.5" × 1.5"
+    SEPARACION: 0.5,    // pulgadas entre stickers, para un corte fluido
+    MARGEN: 0.25,       // pulgadas entre los stickers y el borde de la hoja
+    MAX_DISENOS: 24,
+    MAX_STICKERS: 200,
+  },
   MAX_MB_ARCHIVO: 15,
   MAX_MB_TOTAL: 35,
 };
@@ -937,6 +969,10 @@ const state = {
   producto: "stickers", unidad: "in", material: "gloss", forma: "contorno",
   tamano: "3", w: 3, h: 3, cantidad: 100, otra: false, otraValor: "",
   archivo: null, ext: "", previewURL: null, imgW: null, imgH: null, enlace: "", notas: "",
+  // Hojas de stickers: varios diseños. Cada uno: { id, file, nombre, ext, url,
+  // natW, natH, recorte:[x0,y0,x1,y1] (fracción sin bordes transparentes),
+  // ratio (ancho/alto ya recortado), copias, listo }.
+  disenos: [], copiasManual: false, hoja: null,
 };
 let carrito = [];
 let cuponAplicado = null;
@@ -1219,11 +1255,22 @@ function renderOpciones() { renderMateriales(); renderFormas(); renderTamanos();
 /* ---------- Vista previa ---------- */
 function updatePreview() {
   $("#stage").className = `stage ${state.material} f-${state.forma}`;
-  const S = Math.min(44, 220 / Math.max(state.w, state.h, 0.1));
+  let S = Math.min(44, 220 / Math.max(state.w, state.h, 0.1));
+  if (esHojas() && state.disenos.length) {
+    // La hoja armada usa casi todo el recuadro (deja lugar para la etiqueta de medidas).
+    const st = $("#stage"), altoDisp = (st.clientHeight || 300) - 56, anchoDisp = (st.clientWidth || 400) - 32;
+    S = Math.max(10, Math.min(40, altoDisp / state.h, anchoDisp / state.w));
+  }
   const pv = $("#pv");
   pv.style.width = Math.round(state.w * S) + "px";
   pv.style.height = Math.round(state.h * S) + "px";
   $("#dimtag").textContent = medidaTxt(state.w, state.h);
+  if (renderHojaPreview()) {
+    $("#stage").classList.add("hoja-armada");
+    $("#dimtag").textContent = `${medidaTxt(state.w, state.h)} · ${state.hoja.total} stickers de ${medida(state.hoja.s)}`;
+    $("#quality").hidden = true;
+    return;
+  }
 
   const img = $("#pvImg"), ph = $("#ph"), sheen = $("#sheen");
   if (state.previewURL) {
@@ -1257,7 +1304,10 @@ function updatePreview() {
 const validarTamano = () => state.w >= CONFIG.TAMANO_MIN && state.h >= CONFIG.TAMANO_MIN && state.w <= CONFIG.TAMANO_MAX && state.h <= CONFIG.TAMANO_MAX;
 function motivoBloqueo() {
   const q = cantidadActual();
-  if (!state.archivo && !/^https?:\/\/\S+\.\S+/.test(state.enlace)) return "archivo";
+  if (esHojas() && state.disenos.length) {
+    if (state.disenos.some(d => !d.listo) || !state.hoja) return "Procesando tus diseños…";
+    if (!state.hoja.cabe) return `Tus diseños no caben en esta hoja con el mínimo de ${medida(CONFIG.HOJA.MIN_STICKER)} por sticker. Quita diseños o elige una hoja más grande.`;
+  } else if (!state.archivo && !/^https?:\/\/\S+\.\S+/.test(state.enlace)) return "archivo";
   if (!validarTamano()) return `El tamaño debe estar entre ${medida(CONFIG.TAMANO_MIN)} y ${medida(CONFIG.TAMANO_MAX)} por lado.`;
   if (!q || q < minCant()) return `La cantidad mínima es ${minCant()} unidades.`;
   return "";
@@ -1272,7 +1322,8 @@ function updateSummary() {
     <dt>Producto</dt><dd>${P().nombre}</dd>
     <dt>Material</dt><dd>${CONFIG.MATERIALES[state.material].nombre}</dd>
     <dt>Forma</dt><dd>${CONFIG.FORMAS[state.forma].nombre}</dd>
-    <dt>Tamaño</dt><dd>${medidaTxt(state.w, state.h)}</dd>
+    <dt>${esHojas() ? "Tamaño de hoja" : "Tamaño"}</dt><dd>${medidaTxt(state.w, state.h)}</dd>
+    ${esHojas() && state.hoja && state.hoja.cabe ? `<dt>Stickers por hoja</dt><dd>${state.hoja.total} de ${medida(state.hoja.s)} · ${state.disenos.length} diseño${state.disenos.length === 1 ? "" : "s"}</dd>` : ""}
     <dt>Cantidad</dt><dd>${q ? q.toLocaleString("es-DO") : "—"}</dd>
     ${ok && descuentoPct > 0 ? `<dt>Descuento por volumen</dt><dd>-${Math.round(descuentoPct * 100)}% <span style="color:var(--ok-fg);font-weight:700">(ahorras ${fmt(ahorro)})</span></dd>` : ""}`;
   $("#unitP").textContent = ok ? fmt2(u) : "—";
@@ -1282,9 +1333,9 @@ function updateSummary() {
   const m = motivoBloqueo();
   const hint = $("#addHint");
   hint.classList.remove("alert");
-  hint.textContent = m === "archivo" ? "Primero sube tu diseño en el paso 1." : m;
+  hint.textContent = m === "archivo" ? (esHojas() ? "Primero sube tus diseños en el paso 1." : "Primero sube tu diseño en el paso 1.") : m;
 }
-function refrescar() { renderOpciones(); updatePreview(); updateSummary(); }
+function refrescar() { recalcularHoja(); renderOpciones(); renderDrop(); updatePreview(); updateSummary(); }
 
 /* ---------- Archivo ---------- */
 function setArchivo(file) {
@@ -1338,7 +1389,12 @@ function editarItem(id) {
   $("#bTitle").textContent = p.nombre;
   syncCustomInputs(); renderOpciones();
 
-  if (i.base64) { setArchivo(base64ToFile(i.base64, i.nombre, i.tipo)); }
+  if (i.archivos && i.archivos.length) {
+    quitarArchivo();
+    state.disenos = []; state.copiasManual = true;
+    agregarDisenos(i.archivos.map(a => base64ToFile(a.base64, a.nombre, a.tipo)));
+    i.archivos.forEach((a, k) => { if (state.disenos[k]) state.disenos[k].copias = a.copias || 1; });
+  } else if (i.base64) { setArchivo(base64ToFile(i.base64, i.nombre, i.tipo)); }
   else { quitarArchivo(); }
   $("#enlace").value = state.enlace;
   if (state.enlace) $("#altBox").open = true;
@@ -1350,9 +1406,22 @@ function editarItem(id) {
   toast("Ajusta lo que necesites y agrégalo de nuevo a tu pedido.");
 }
 function renderDrop() {
-  const has = !!state.archivo;
+  const hojas = esHojas();
+  const input = $("#file");
+  input.multiple = hojas;
+  input.accept = hojas ? ".png,.jpg,.jpeg,.webp,.svg" : ".png,.jpg,.jpeg,.webp,.svg,.pdf,.ai,.eps,.psd";
+  const big = $("#dropEmpty .big"), sub = $("#dropEmpty .muted");
+  if (big) big.textContent = hojas ? (state.disenos.length ? "Toca aquí para agregar más diseños" : "Toca aquí para subir tus diseños") : "Toca aquí para subir tu diseño";
+  if (sub) sub.textContent = hojas ? "puedes subir varios a la vez (PNG con fondo transparente es lo ideal)" : "o arrástralo a este recuadro";
+  $("#stepFileTitulo").textContent = hojas ? "Sube tus diseños" : "Sube tu diseño";
+  $("#fileHint").hidden = hojas; $("#fileHintHoja").hidden = !hojas;
+  $("#tamanoHint").textContent = hojas
+    ? "Es el tamaño de la hoja completa. Tus diseños se acomodan solos adentro, con 0.5\" entre cada uno y 0.25\" de borde."
+    : "El tamaño es el área máxima que ocupará tu diseño; el corte sigue su forma dentro de esa medida.";
+  const has = !hojas && !!state.archivo;
   $("#dropEmpty").hidden = has; $("#dropFile").hidden = !has;
   if (has) { $("#fExt").textContent = state.ext; $("#fName").textContent = state.archivo.name; $("#fSize").textContent = pesoTxt(state.archivo.size); }
+  renderListaHoja();
 }
 const leerBase64 = (file, onProgress) => new Promise((res, rej) => {
   const r = new FileReader();
@@ -1361,6 +1430,268 @@ const leerBase64 = (file, onProgress) => new Promise((res, rej) => {
   r.onerror = () => rej(new Error("No se pudo leer el archivo"));
   r.readAsDataURL(file);
 });
+
+/* ---------- Hojas de stickers: varios diseños + acomodo automático ----------
+   Reglas (CONFIG.HOJA): cada sticker ≥ 1.5" × 1.5", 0.5" entre stickers y
+   0.25" de borde. Todos los stickers comparten el mismo tamaño ("lado mayor"
+   s) y se acomodan por filas; s se busca lo más grande posible. Si sobra
+   espacio, se repiten los diseños hasta llenar la hoja (round-robin); si el
+   cliente ajusta las copias a mano, se respeta y solo se recalcula el tamaño. */
+const esHojas = () => state.producto === "hojas";
+const HOJA_IMG_EXT = ["png", "jpg", "jpeg", "webp", "svg"];
+
+// Medidas de un sticker de lado mayor s con proporción r (ancho/alto). Si el
+// diseño es muy alargado, crece lo justo para que su lado corto también
+// respete el mínimo (1.5"); los demás diseños no se ven afectados.
+const medidasSticker = (s, r) => {
+  const lado = Math.max(s, CONFIG.HOJA.MIN_STICKER / Math.min(r, 1 / r));
+  return r >= 1 ? { w: lado, h: lado / r } : { w: lado * r, h: lado };
+};
+
+// Acomoda la lista (cada elemento { d, r }) con lado mayor s. Devuelve las
+// piezas con posición en pulgadas (centradas en la hoja) o null si no cabe.
+function acomodar(lista, s, W, H) {
+  const { SEPARACION: g, MARGEN: m } = CONFIG.HOJA;
+  const Wu = W - 2 * m, Hu = H - 2 * m;
+  const items = lista.map((it, i) => ({ ...it, i, ...medidasSticker(s, it.r) }))
+    .sort((a, b) => b.h - a.h || a.i - b.i);
+  const filas = [];
+  let fila = null;
+  for (const it of items) {
+    if (it.w > Wu + 1e-9) return null;
+    if (!fila || fila.ancho + g + it.w > Wu + 1e-9) {
+      fila = { piezas: [], ancho: -g, alto: 0 };
+      filas.push(fila);
+    }
+    fila.piezas.push(it);
+    fila.ancho += g + it.w;
+    fila.alto = Math.max(fila.alto, it.h);
+  }
+  const altoTotal = filas.reduce((a, f) => a + f.alto, 0) + g * Math.max(0, filas.length - 1);
+  if (altoTotal > Hu + 1e-9) return null;
+  const piezas = [];
+  let y = m + (Hu - altoTotal) / 2;
+  for (const f of filas) {
+    let x = m + (Wu - f.ancho) / 2;
+    for (const it of f.piezas) {
+      piezas.push({ d: it.d, x: +x.toFixed(4), y: +(y + (f.alto - it.h) / 2).toFixed(4), w: +it.w.toFixed(4), h: +it.h.toFixed(4) });
+      x += it.w + g;
+    }
+    y += f.alto + g;
+  }
+  return piezas;
+}
+
+// Lado mayor más grande con el que cabe la lista, o null si ni el mínimo cabe.
+function mejorTamano(lista, W, H) {
+  if (!lista.length) return null;
+  const MIN = CONFIG.HOJA.MIN_STICKER;
+  // medidasSticker ya garantiza que el lado corto de cada uno sea ≥ 1.5".
+  let lo = MIN;
+  if (!acomodar(lista, lo, W, H)) return null;
+  let hi = Math.max(W, H);
+  for (let k = 0; k < 32; k++) {
+    const mid = (lo + hi) / 2;
+    if (acomodar(lista, mid, W, H)) lo = mid; else hi = mid;
+  }
+  return Math.floor(lo * 20) / 20; // a 0.05" para medidas limpias
+}
+
+const listaDeCopias = () => state.disenos.flatMap((d, i) => Array.from({ length: d.copias }, () => ({ d: i, r: d.ratio })));
+
+// Copias para llenar la hoja a un tamaño fijo s: empieza con 1 de cada
+// diseño y da una copia más al que tenga menos (si ese no cabe, al
+// siguiente) hasta que ya no quepa ninguno. Devuelve las copias o null.
+function rellenarCon(s, W, H) {
+  const copias = state.disenos.map(() => 1);
+  const lista = () => copias.flatMap((c, i) => Array.from({ length: c }, () => ({ d: i, r: state.disenos[i].ratio })));
+  if (!acomodar(lista(), s, W, H)) return null;
+  let total = copias.length;
+  while (total < CONFIG.HOJA.MAX_STICKERS) {
+    const orden = copias.map((c, i) => i).sort((a, b) => copias[a] - copias[b] || a - b);
+    let agregado = false;
+    for (const i of orden) {
+      copias[i]++;
+      if (acomodar(lista(), s, W, H)) { agregado = true; break; }
+      copias[i]--;
+    }
+    if (!agregado) break;
+    total++;
+  }
+  return copias;
+}
+
+// Recalcula el acomodo. Sin ajustes manuales se prueban los tamaños posibles
+// (de 1.5" al máximo, cada 0.05") y se elige el que más aprovecha la hoja
+// (más superficie cubierta por stickers); ante un empate (±2%), el más grande.
+// Así, si bajar un poco el tamaño permite dos columnas en vez de una, gana.
+// Con ajustes manuales se respetan las copias y solo se busca el tamaño.
+function recalcularHoja() {
+  state.hoja = null;
+  const listos = state.disenos.filter(d => d.listo);
+  if (!esHojas() || !listos.length || listos.length !== state.disenos.length) return;
+  const W = state.w, H = state.h;
+  if (!state.copiasManual) {
+    state.disenos.forEach(d => { d.copias = 1; });
+    const sMax = mejorTamano(listaDeCopias(), W, H);
+    if (sMax) {
+      let mejor = null;
+      for (let s = sMax; s >= CONFIG.HOJA.MIN_STICKER - 1e-9; s = Math.round((s - 0.05) * 100) / 100) {
+        const copias = rellenarCon(s, W, H);
+        if (!copias) continue;
+        const area = copias.reduce((a, c, i) => { const m = medidasSticker(s, state.disenos[i].ratio); return a + c * m.w * m.h; }, 0);
+        if (!mejor || area > mejor.area * 1.02) mejor = { s, copias, area };
+      }
+      if (mejor) state.disenos.forEach((d, i) => { d.copias = mejor.copias[i]; });
+    }
+  }
+  const lista = listaDeCopias();
+  const s = mejorTamano(lista, W, H);
+  if (!s) { state.hoja = { cabe: false }; return; }
+  state.hoja = { cabe: true, s, piezas: acomodar(lista, s, W, H), total: lista.length };
+}
+
+// Recorte de bordes transparentes (para que el acomodo use la silueta real).
+function medirRecorte(img, natW, natH) {
+  const max = 400, k = Math.min(1, max / Math.max(natW, natH));
+  const cw = Math.max(1, Math.round(natW * k)), ch = Math.max(1, Math.round(natH * k));
+  try {
+    const cv = document.createElement("canvas"); cv.width = cw; cv.height = ch;
+    const cx = cv.getContext("2d"); cx.drawImage(img, 0, 0, cw, ch);
+    const px = cx.getImageData(0, 0, cw, ch).data;
+    let x0 = cw, y0 = ch, x1 = -1, y1 = -1;
+    for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) {
+      if (px[(y * cw + x) * 4 + 3] > 8) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    }
+    if (x1 < 0) return [0, 0, 1, 1];
+    return [x0 / cw, y0 / ch, (x1 + 1) / cw, (y1 + 1) / ch].map(v => +v.toFixed(4));
+  } catch (e) { return [0, 0, 1, 1]; }
+}
+
+function agregarDisenos(files) {
+  const lista = [...(files || [])];
+  if (!lista.length) return;
+  const espacio = CONFIG.HOJA.MAX_DISENOS - state.disenos.length;
+  if (espacio <= 0) { toast(`Máximo ${CONFIG.HOJA.MAX_DISENOS} diseños por hoja.`); return; }
+  let rechazados = 0, pesados = 0;
+  for (const file of lista.slice(0, espacio)) {
+    const ext = (file.name.split(".").pop() || "").toLowerCase();
+    if (!HOJA_IMG_EXT.includes(ext)) { rechazados++; continue; }
+    if (file.size > CONFIG.MAX_MB_ARCHIVO * 1048576) { pesados++; continue; }
+    const d = { id: String(Date.now()) + Math.random().toString(36).slice(2, 7), file, nombre: file.name, ext, url: URL.createObjectURL(file), natW: 0, natH: 0, recorte: [0, 0, 1, 1], ratio: 1, copias: 1, listo: false };
+    state.disenos.push(d);
+    const im = new Image();
+    im.onload = () => {
+      d.natW = im.naturalWidth || 1000; d.natH = im.naturalHeight || 1000;
+      d.recorte = medirRecorte(im, d.natW, d.natH);
+      const [x0, y0, x1, y1] = d.recorte;
+      d.ratio = Math.max(0.05, Math.min(20, ((x1 - x0) * d.natW) / ((y1 - y0) * d.natH)));
+      d.listo = true;
+      refrescarHoja();
+    };
+    im.onerror = () => { d.listo = true; refrescarHoja(); };
+    im.src = d.url;
+  }
+  if (lista.length > espacio) toast(`Solo se agregaron ${espacio} diseños (máximo ${CONFIG.HOJA.MAX_DISENOS}).`);
+  else if (rechazados) toast("Para el acomodo automático sube imágenes PNG, JPG, WEBP o SVG. Si tu diseño es PDF o AI, pega un enlace o escríbenos.");
+  else if (pesados) toast(`Algún archivo pesa más de ${CONFIG.MAX_MB_ARCHIVO} MB. Pega un enlace de Google Drive para ese.`);
+  $("#stepFile").classList.remove("need");
+  refrescarHoja();
+}
+function quitarDiseno(id) {
+  const d = state.disenos.find(x => x.id === id);
+  if (d) URL.revokeObjectURL(d.url);
+  state.disenos = state.disenos.filter(x => x.id !== id);
+  if (!state.disenos.length) state.copiasManual = false;
+  refrescarHoja();
+}
+function cambiarCopias(id, delta) {
+  const d = state.disenos.find(x => x.id === id);
+  if (!d) return;
+  const antes = d.copias;
+  d.copias = Math.max(1, d.copias + delta);
+  if (d.copias === antes) return;
+  const total = state.disenos.reduce((a, x) => a + x.copias, 0);
+  if (total > CONFIG.HOJA.MAX_STICKERS || (delta > 0 && !mejorTamano(listaDeCopias(), state.w, state.h))) {
+    d.copias = antes;
+    toast(`Ya no caben más stickers en esta hoja (mínimo ${medida(CONFIG.HOJA.MIN_STICKER)} cada uno).`);
+    return;
+  }
+  state.copiasManual = true;
+  refrescarHoja();
+}
+function rellenarHoja() { state.copiasManual = false; refrescarHoja(); }
+function refrescarHoja() { recalcularHoja(); renderDrop(); updatePreview(); updateSummary(); }
+
+// Lista de diseños en el paso 1 (solo Hojas).
+function renderListaHoja() {
+  const box = $("#hojaLista");
+  if (!box) return;
+  if (!esHojas() || !state.disenos.length) { box.hidden = true; box.innerHTML = ""; return; }
+  const h = state.hoja;
+  const filas = state.disenos.map(d => {
+    let calidad = "";
+    if (h && h.cabe && d.listo && d.ext !== "svg" && d.natW) {
+      const [x0, y0, x1, y1] = d.recorte;
+      const med = medidasSticker(h.s, d.ratio);
+      const dpi = Math.round(Math.min(((x1 - x0) * d.natW) / med.w, ((y1 - y0) * d.natH) / med.h));
+      calidad = dpi >= 300 ? `<span class="hq ok">${dpi} dpi</span>` : dpi >= 150 ? `<span class="hq mid">${dpi} dpi</span>` : `<span class="hq low">${dpi} dpi · baja</span>`;
+    } else if (d.ext === "svg") calidad = `<span class="hq ok">Vectorial</span>`;
+    return `<div class="hrow">
+      <div class="hthumb" style="background-image:url('${d.url}')"></div>
+      <div class="hmeta"><b title="${esc(d.nombre)}">${esc(d.nombre)}</b><small>${d.listo ? calidad : "Procesando…"}</small></div>
+      <div class="hcopias" role="group" aria-label="Copias de ${esc(d.nombre)}">
+        <button type="button" data-hoja-menos="${d.id}" aria-label="Una copia menos" ${d.copias <= 1 ? "disabled" : ""}>−</button>
+        <span>${d.copias}</span>
+        <button type="button" data-hoja-mas="${d.id}" aria-label="Una copia más">+</button>
+      </div>
+      <button type="button" class="hquitar" data-hoja-quitar="${d.id}" aria-label="Quitar ${esc(d.nombre)}">✕</button>
+    </div>`;
+  }).join("");
+  let resumen = "";
+  if (h && h.cabe) resumen = `<b>${h.total} stickers</b> de ${medida(h.s)} (lado mayor) en tu hoja de ${medidaTxt(state.w, state.h)}.`;
+  else if (h && !h.cabe) resumen = `<span class="halert">No caben en esta hoja con el mínimo de ${medida(CONFIG.HOJA.MIN_STICKER)} por sticker. Quita diseños o elige una hoja más grande.</span>`;
+  else resumen = "Preparando tus diseños…";
+  box.innerHTML = `<div class="hhead">${resumen}</div>${filas}
+    <div class="hacts">
+      <button type="button" class="btn sm ghost" data-hoja-agregar>+ Agregar más diseños</button>
+      ${state.copiasManual ? `<button type="button" class="btn sm ghost" data-hoja-rellenar>Rellenar la hoja automáticamente</button>` : ""}
+    </div>
+    <p class="hint" style="margin:8px 0 0">Acomodamos tus diseños solos: mismo tamaño para todos, lo más grandes posible, con ${medida(CONFIG.HOJA.SEPARACION)} entre cada uno para un corte limpio. Usa − y + para cambiar cuántas copias lleva cada diseño.</p>`;
+  box.hidden = false;
+}
+
+// Vista previa de la hoja armada (dentro de #pv).
+function renderHojaPreview() {
+  const cont = $("#pvHoja");
+  if (!cont) return false;
+  const h = state.hoja;
+  if (!esHojas() || !state.disenos.length || !h || !h.cabe) { cont.hidden = true; cont.innerHTML = ""; return false; }
+  const W = state.w, H = state.h;
+  cont.innerHTML = h.piezas.map(p => {
+    const d = state.disenos[p.d];
+    const [x0, y0, x1, y1] = d.recorte;
+    const fw = x1 - x0, fh = y1 - y0;
+    return `<div class="hpz" style="left:${(p.x / W) * 100}%;top:${(p.y / H) * 100}%;width:${(p.w / W) * 100}%;height:${(p.h / H) * 100}%">
+      <img src="${d.url}" alt="" style="width:${100 / fw}%;height:${100 / fh}%;left:${(-x0 / fw) * 100}%;top:${(-y0 / fh) * 100}%"></div>`;
+  }).join("");
+  cont.hidden = false;
+  return true;
+}
+
+// Para el montaje en PDF: SVG y WEBP se convierten a PNG ya recortado (el
+// servidor solo puede incrustar PNG/JPG). PNG/JPG viajan tal cual.
+async function rasterizarDiseno(d, ladoMayorIn) {
+  const [x0, y0, x1, y1] = d.recorte;
+  const im = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = d.url; });
+  const natW = d.natW || 1000, natH = d.natH || 1000;
+  const objetivo = Math.min(3000, Math.max(600, Math.round(ladoMayorIn * 300)));
+  const k = objetivo / Math.max((x1 - x0) * natW, (y1 - y0) * natH);
+  const cw = Math.max(1, Math.round((x1 - x0) * natW * k)), ch = Math.max(1, Math.round((y1 - y0) * natH * k));
+  const cv = document.createElement("canvas"); cv.width = cw; cv.height = ch;
+  cv.getContext("2d").drawImage(im, -x0 * natW * k, -y0 * natH * k, natW * k, natH * k);
+  return cv.toDataURL("image/png").split(",")[1];
+}
 
 /* ---------- Carrito ---------- */
 let agregando = false;
@@ -1386,6 +1717,39 @@ async function agregar() {
     const q = cantidadActual();
     const u = precioUnitario(state.w, state.h, q);
     const descuentoPct = obtenerDescuentoPorCantidad(q);
+    if (esHojas() && state.disenos.length) {
+      // Hoja con varios diseños: se suben todos los archivos + el acomodo
+      // (montaje) para que el taller reciba el PDF armado a tamaño real.
+      const h = state.hoja;
+      const archivos = [];
+      for (let k = 0; k < state.disenos.length; k++) {
+        const d = state.disenos[k];
+        addBtn.textContent = `Subiendo diseño ${k + 1} de ${state.disenos.length}…`;
+        const base64 = await leerBase64(d.file);
+        const png64 = ["svg", "webp"].includes(d.ext) ? await rasterizarDiseno(d, h.s) : null;
+        archivos.push({ nombre: d.nombre, tipo: d.file.type || "application/octet-stream", base64, png64, recorte: d.recorte, copias: d.copias });
+      }
+      carrito.push({
+        id: String(Date.now()) + Math.floor(Math.random() * 1000),
+        producto: state.producto, productoNombre: P().nombre,
+        nombre: `${state.disenos.length} diseño${state.disenos.length === 1 ? "" : "s"} · ${h.total} stickers por hoja`,
+        tipo: "", ext: "hoja", base64: null, thumb: state.disenos[0].url,
+        archivos,
+        montaje: { hoja: { w: state.w, h: state.h }, margen: CONFIG.HOJA.MARGEN, separacion: CONFIG.HOJA.SEPARACION, tam: h.s, total: h.total, piezas: h.piezas },
+        enlace: state.enlace, notas: state.notas,
+        material: CONFIG.MATERIALES[state.material].nombre, forma: CONFIG.FORMAS[state.forma].nombre,
+        w: state.w, h: state.h, tamanoTxt: medidaTxt(state.w, state.h),
+        cantidad: q, unit: u, descuentoPct, subtotal: redondear(u * q),
+      });
+      // Las URLs se quedan vivas: el carrito usa la primera como miniatura.
+      state.disenos = []; state.copiasManual = false; state.hoja = null;
+      state.enlace = ""; state.notas = "";
+      $("#file").value = ""; $("#enlace").value = ""; $("#notas").value = "";
+      renderDrop(); updatePreview(); updateSummary(); renderCarrito();
+      toast("Hoja agregada a tu pedido.");
+      $("#checkout").scrollIntoView({ behavior: "smooth" });
+      return;
+    }
     const base64 = state.archivo
       ? await leerBase64(state.archivo, pct => { if (pct < 100) addBtn.textContent = `Subiendo… ${pct}%`; else addBtn.textContent = "Agregando…"; })
       : null;
@@ -1531,7 +1895,8 @@ $("#form").addEventListener("submit", async e => {
   if (ent.direccion && !String(f.get("direccion") || "").trim()) { toast("Escribe la dirección de entrega."); $("#direccion").focus(); return; }
   const sp = subProductos();
   if (sp > 0 && sp < CONFIG.MINIMO_PEDIDO) { toast($("#minNotice").textContent); $("#minNotice").scrollIntoView({ behavior: "smooth", block: "center" }); return; }
-  const bytes = carrito.reduce((a, i) => a + (i.base64 ? i.base64.length * 0.75 : 0), 0);
+  const bytes = carrito.reduce((a, i) => a + (i.base64 ? i.base64.length * 0.75 : 0)
+    + (i.archivos || []).reduce((b, f) => b + (f.base64.length + (f.png64 ? f.png64.length : 0)) * 0.75, 0), 0);
   if (bytes > CONFIG.MAX_MB_TOTAL * 1048576) { toast(`Tus archivos suman más de ${CONFIG.MAX_MB_TOTAL} MB. Usa enlaces de Drive para los más pesados.`); return; }
 
   const sub = subtotalCarrito();
@@ -1580,6 +1945,9 @@ $("#form").addEventListener("submit", async e => {
         precioUnit: +i.unit.toFixed(2), precioTotal: aCentavos(i.subtotal),
         nombreArchivo: i.nombre, enlace: i.enlace, notas: i.notas,
         archivo: i.base64 ? { nombre: i.nombre, tipo: i.tipo, base64: i.base64 } : null,
+        // Hojas de stickers: todos los diseños + el acomodo para el montaje.
+        archivos: i.archivos || undefined,
+        montaje: i.montaje || undefined,
       })),
       entrega: { tipo: ent.nombre, direccion: ent.direccion ? f.get("direccion") : "" },
       fechaDeseada: f.get("fecha") || "",
@@ -1753,7 +2121,7 @@ function leerCustom() {
   const w = parseFloat($("#cw").value) / k, h = parseFloat($("#ch").value) / k;
   if (!isNaN(w)) state.w = w;
   if (!isNaN(h)) state.h = h;
-  renderTamanos(); renderCantidades(); updatePreview(); updateSummary();
+  recalcularHoja(); renderTamanos(); renderCantidades(); renderListaHoja(); updatePreview(); updateSummary();
 }
 $("#cw").addEventListener("input", leerCustom);
 $("#ch").addEventListener("input", leerCustom);
@@ -1765,10 +2133,22 @@ $$(".units button").forEach(b => b.addEventListener("click", () => {
 $$(".ptabs button").forEach(b => b.addEventListener("click", () => setProducto(b.dataset.tab)));
 
 const drop = $("#drop");
-$("#file").addEventListener("change", e => setArchivo(e.target.files[0]));
+$("#file").addEventListener("change", e => {
+  if (esHojas()) { agregarDisenos(e.target.files); e.target.value = ""; }
+  else setArchivo(e.target.files[0]);
+});
 ["dragenter", "dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
 ["dragleave", "drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
-drop.addEventListener("drop", e => setArchivo(e.dataTransfer.files[0]));
+drop.addEventListener("drop", e => { if (esHojas()) agregarDisenos(e.dataTransfer.files); else setArchivo(e.dataTransfer.files[0]); });
+$("#hojaLista").addEventListener("click", e => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  if (b.dataset.hojaMas) cambiarCopias(b.dataset.hojaMas, +1);
+  else if (b.dataset.hojaMenos) cambiarCopias(b.dataset.hojaMenos, -1);
+  else if (b.dataset.hojaQuitar) quitarDiseno(b.dataset.hojaQuitar);
+  else if (b.hasAttribute("data-hoja-rellenar")) rellenarHoja();
+  else if (b.hasAttribute("data-hoja-agregar")) $("#file").click();
+});
 $("#fRemove").addEventListener("click", e => { e.preventDefault(); e.stopPropagation(); quitarArchivo(); });
 $("#enlace").addEventListener("input", e => { state.enlace = e.target.value.trim(); updateSummary(); });
 $("#notas").addEventListener("input", e => { state.notas = e.target.value; });

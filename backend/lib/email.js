@@ -30,7 +30,7 @@ function crearTransportador() {
 // `archivosAdjuntos` son los diseños que el cliente subió directo (no por
 // enlace de Drive/WeTransfer) — ver server.js, que los separa del resto del
 // pedido antes de guardarlo. Formato nodemailer: [{ filename, content }].
-async function enviarCotizacionAlTaller(pedido, pdfBuffer, linkWhatsApp, archivosAdjuntos = [], avisosExtra = []) {
+async function enviarCotizacionAlTaller(pedido, pdfBuffer, linkWhatsApp, archivosAdjuntos = [], avisosExtra = [], montajes = []) {
   const transportador = crearTransportador();
   await transportador.sendMail({
     from: { name: "Buenos Prints — Pedidos", address: process.env.SMTP_USER },
@@ -38,9 +38,9 @@ async function enviarCotizacionAlTaller(pedido, pdfBuffer, linkWhatsApp, archivo
     // Responder este correo le escribe directo al cliente (si dejó correo).
     replyTo: pedido.cliente_email || undefined,
     subject: asuntoTaller(pedido),
-    text: textoTaller(pedido, linkWhatsApp, archivosAdjuntos.length, avisosExtra),
-    html: htmlTaller(pedido, linkWhatsApp, archivosAdjuntos.length, avisosExtra),
-    attachments: [{ filename: `${pedido.numero}.pdf`, content: pdfBuffer }, ...archivosAdjuntos],
+    text: textoTaller(pedido, linkWhatsApp, archivosAdjuntos.length, avisosExtra, montajes.length),
+    html: htmlTaller(pedido, linkWhatsApp, archivosAdjuntos.length, avisosExtra, montajes.length),
+    attachments: [{ filename: `${pedido.numero}.pdf`, content: pdfBuffer }, ...montajes, ...archivosAdjuntos],
   });
 }
 
@@ -157,7 +157,7 @@ function filaDato(k, v) {
   if (!v) return "";
   return `<tr><td valign="top" style="padding:6px 12px 6px 0;font:14px ${FUENTE};color:${C.muted};white-space:nowrap">${esc(k)}</td><td style="padding:6px 0;font:15px/1.4 ${FUENTE};color:${C.ink}">${v}</td></tr>`;
 }
-function textoTaller(p, linkWa, nArchivos, avisosExtra = []) {
+function textoTaller(p, linkWa, nArchivos, avisosExtra = [], nMontajes = 0) {
   const d = leerDetalle(p);
   const items = Array.isArray(d.items) ? d.items : [];
   const avisos = [...avisosExtra, ...avisosTaller(p, d)].map((a) => "• " + a.replace(/<[^>]+>/g, ""));
@@ -174,10 +174,11 @@ function textoTaller(p, linkWa, nArchivos, avisosExtra = []) {
     d.rush ? "RUSH: sí (24h)" : null,
     "", "Diseños:",
     ...items.map((it, i) => `${i + 1}. ${it.producto || "Producto"} · ${it.cantidad || 0} unds${it.w && it.h ? ` · ${it.w}" × ${it.h}"` : ""}${it.material ? " · " + it.material : ""}${it.forma ? " · " + it.forma : ""}` +
-      (it.enlace ? `\n   Enlace: ${it.enlace}` : it.nombreArchivo ? `\n   Archivo adjunto: ${it.nombreArchivo}` : "") + (it.notas ? `\n   Notas: ${it.notas}` : "")),
+      (it.montaje ? `\n   Hoja de ${it.montaje.hoja.w}" × ${it.montaje.hoja.h}": ${it.montaje.piezas.length} stickers de ${it.montaje.tam}" (montaje PDF adjunto)` + (it.archivos || []).map((a) => `\n   - ${a.nombre} ×${a.copias}`).join("")
+        : it.enlace ? `\n   Enlace: ${it.enlace}` : it.nombreArchivo ? `\n   Archivo adjunto: ${it.nombreArchivo}` : "") + (it.notas ? `\n   Notas: ${it.notas}` : "")),
     d.notas ? `\nNotas del pedido: ${d.notas}` : null,
     "", `Total: ${rd(p.total)}`,
-    `Adjuntos: PDF de cotización${nArchivos ? ` + ${nArchivos} archivo(s) de diseño` : ""}.`,
+    `Adjuntos: PDF de cotización${nMontajes ? ` + ${nMontajes} montaje(s) de hoja` : ""}${nArchivos ? ` + ${nArchivos} archivo(s) de diseño` : ""}.`,
     linkWa ? `\nAbrir WhatsApp con el cliente (mensaje y datos de pago ya listos):\n${linkWa}` : null,
   ].filter((x) => x !== null).join("\n");
 }
@@ -216,7 +217,7 @@ function avisosTaller(p, d) {
   return avisos;
 }
 
-function htmlTaller(p, linkWa, nArchivos, avisosExtra = []) {
+function htmlTaller(p, linkWa, nArchivos, avisosExtra = [], nMontajes = 0) {
   const d = leerDetalle(p);
   const items = Array.isArray(d.items) ? d.items : [];
   const tel = p.cliente_telefono ? `<a href="tel:${esc(String(p.cliente_telefono).replace(/[^\d+]/g, ""))}" style="color:${C.ink}">${esc(p.cliente_telefono)}</a>` : "";
@@ -225,7 +226,10 @@ function htmlTaller(p, linkWa, nArchivos, avisosExtra = []) {
   const disenos = items.map((it, i) => {
     const medida = it.w && it.h ? ` · ${it.w}" × ${it.h}"` : "";
     const extra = [it.material, it.forma].filter(Boolean).join(" · ");
-    const archivo = it.enlace
+    const archivo = it.montaje
+      ? `Hoja de <b>${esc(it.montaje.hoja.w)}" × ${esc(it.montaje.hoja.h)}"</b>: ${esc(it.montaje.piezas.length)} stickers de ${esc(it.montaje.tam)}" — <b>montaje PDF adjunto</b>` +
+        `<br><span style="color:${C.muted}">${(it.archivos || []).map((a) => `${esc(a.nombre)} ×${esc(a.copias)}`).join(" · ")}</span>`
+      : it.enlace
       ? `<a href="${esc(it.enlace)}" style="color:${C.ink};font-weight:700">Abrir enlace del diseño</a>`
       : it.nombreArchivo ? `Archivo adjunto: <b>${esc(it.nombreArchivo)}</b>` : `<span style="color:${C.accent};font-weight:700">Sin diseño todavía</span>`;
     return `<tr><td style="padding:10px 0;border-top:1px dashed ${C.line};font:15px/1.45 ${FUENTE};color:${C.ink}">
@@ -257,7 +261,7 @@ function htmlTaller(p, linkWa, nArchivos, avisosExtra = []) {
 
     ${resumenHTML(p, d, "Resumen")}
 
-    <p style="margin:20px 0 0;font:13px/1.5 ${FUENTE};color:${C.muted}">Adjuntos: la cotización en PDF${nArchivos ? ` y ${nArchivos} archivo(s) de diseño que subió el cliente` : ""}.</p>
+    <p style="margin:20px 0 0;font:13px/1.5 ${FUENTE};color:${C.muted}">Adjuntos: la cotización en PDF${nMontajes ? `, ${nMontajes} montaje(s) de hoja a tamaño real` : ""}${nArchivos ? ` y ${nArchivos} archivo(s) de diseño que subió el cliente` : ""}.</p>
 
     <div style="border-top:2px solid ${C.ink};margin:22px 0 0;padding:18px 0 0">
     <p style="margin:0 0 12px;font:700 15px/1.5 ${FUENTE};color:${C.ink}">¿Todo revisado (diseños, entrega y total)? Envía la cotización al cliente:</p>
