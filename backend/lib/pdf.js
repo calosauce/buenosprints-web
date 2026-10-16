@@ -82,11 +82,11 @@ function generarPDFPedido(pedido, { esFactura = false } = {}) {
 
     // Sello "PAGADO" a la derecha del bloque del cliente.
     if (esFactura) {
-      const sx = ANCHO_PAGINA - MARGEN - 150, sy = yCliente + 2;
+      const sx = ANCHO_PAGINA - MARGEN - 140, sy = yCliente - 6;
       doc.save();
-      doc.rotate(-10, { origin: [sx + 70, sy + 20] });
-      doc.lineWidth(3).roundedRect(sx, sy, 140, 40, 6).strokeColor(ROJO).stroke();
-      doc.font("Helvetica-Bold").fontSize(24).fillColor(ROJO).text("PAGADO", sx, sy + 9, { width: 140, align: "center", characterSpacing: 2 });
+      doc.rotate(-8, { origin: [sx + 60, sy + 17] });
+      doc.lineWidth(3).roundedRect(sx, sy, 120, 34, 6).strokeColor(ROJO).stroke();
+      doc.font("Helvetica-Bold").fontSize(20).fillColor(ROJO).text("PAGADO", sx, sy + 8, { width: 120, align: "center", characterSpacing: 2, lineBreak: false });
       doc.restore();
     }
 

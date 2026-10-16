@@ -262,19 +262,6 @@ app.get("/api/cupones/:codigo", async (req, res) => {
   }
 });
 
-// TEMPORAL — probar el cambio de estado (mismo proceso que el Sheet) con
-// pedidos de prueba (nombre "PRUEBA…" y correo = el del taller). Se elimina tras la prueba.
-app.post("/api/prueba/:numero/estado", async (req, res) => {
-  const { estado } = req.body || {};
-  if (!ESTADOS.includes(estado)) return res.status(400).json({ error: "Estado inválido." });
-  const actual = await obtenerPedido(req.params.numero);
-  const correoTaller = (process.env.TALLER_EMAIL || process.env.SMTP_USER || "").toLowerCase();
-  const esPrueba = actual && /^PRUEBA/i.test(actual.cliente_nombre || "") && (actual.cliente_email || "").toLowerCase() === correoTaller;
-  if (!esPrueba) return res.status(404).json({ error: "Solo pedidos de prueba." });
-  const r = await procesarCambioDeEstado(actual.numero, estado);
-  res.json({ ok: true, estado: r.pedido.estado, correoEnviado: r.correoEnviado, comprobante: r.comprobante, comprobanteAlTaller: r.comprobanteAlTaller });
-});
-
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
 // Recordatorio automático: cada hora busca pergaminos sin usar que vencen en
