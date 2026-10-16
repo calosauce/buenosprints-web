@@ -1627,26 +1627,26 @@ const waLink = msg => `https://wa.me/${CONFIG.WHATSAPP}?text=${encodeURIComponen
 // Mensaje legible (con emojis y saltos de línea) para transparencia fiscal en WhatsApp:
 // Producto, Dimensiones, Cantidad, Descuento aplicado, Subtotal, ITBIS desglosado y Total neto.
 function construirMensajeWhatsApp(id, p) {
-  const lineas = [`🎨 *Pedido ${id} — Buenos Prints*`, ""];
+  // Formato de WhatsApp: *texto* = negrita. Sin emojis en el detalle; solo el
+  // camioncito del encabezado y el ✅ en los totales.
+  const lineas = [`🛻 *Pedido ${id} — Buenos Prints*`, ""];
   p.items.forEach((it, i) => {
     const fiscal = desgloseFiscal(it.subtotal);
     lineas.push(`— Artículo ${i + 1} —`);
-    lineas.push(`🏷️ Producto: ${it.producto}`);
-    lineas.push(`📐 Dimensiones: ${it.tamano}`);
-    lineas.push(`🔢 Cantidad: ${it.cantidad.toLocaleString("es-DO")} unidades`);
-    lineas.push(`🎁 Descuento aplicado: ${Math.round(it.descuentoPct * 100)}%`);
-    lineas.push(`💵 Subtotal (sin ITBIS): ${fmt2(fiscal.subtotal)}`);
-    lineas.push(`🧾 ITBIS (18%): ${fmt2(fiscal.itbis)}`);
-    lineas.push(`✅ Total artículo (ITBIS incl.): ${fmt2(it.subtotal)}`);
+    lineas.push(`*Producto:* ${it.producto}`);
+    lineas.push(`*Dimensiones:* ${it.tamano}`);
+    lineas.push(`*Cantidad:* ${it.cantidad.toLocaleString("es-DO")} unidades`);
+    lineas.push(`*Descuento aplicado:* ${Math.round(it.descuentoPct * 100)}%`);
+    lineas.push(`*ITBIS (18%):* ${fmt2(fiscal.itbis)}`);
+    lineas.push(`✅ *Total artículo (ITBIS incl.):* ${fmt2(it.subtotal)}`);
     lineas.push("");
   });
   const fiscalTotal = desgloseFiscal(p.subtotal);
   lineas.push("———————————————");
-  lineas.push(`💵 Subtotal general (sin ITBIS): ${fmt2(fiscalTotal.subtotal)}`);
-  lineas.push(`🧾 ITBIS total (18%): ${fmt2(fiscalTotal.itbis)}`);
-  if (p.cupon) lineas.push(`🎟️ Cupón ${p.cupon.codigo}: -${fmt(p.cupon.descuento)}`);
-  if (p.rush) lineas.push(`⚡ Servicio RUSH (entrega en ${p.rush.horas}h): ${fmt(p.rush.costo)}`);
-  if (p.envio) lineas.push(`🚚 Entrega: ${fmt(p.envio)}`);
+  lineas.push(`*ITBIS total (18%):* ${fmt2(fiscalTotal.itbis)}`);
+  if (p.cupon) lineas.push(`*Cupón ${p.cupon.codigo}:* -${fmt(p.cupon.descuento)}`);
+  if (p.rush) lineas.push(`*Servicio RUSH (entrega en ${p.rush.horas}h):* ${fmt(p.rush.costo)}`);
+  if (p.envio) lineas.push(`*Entrega:* ${fmt(p.envio)}`);
   lineas.push(`✅ *TOTAL NETO A PAGAR: ${fmt(p.total)}*`);
   lineas.push("");
   lineas.push("Quedo atento a los datos de pago para completarlo antes de la prueba digital. ¡Gracias!");
