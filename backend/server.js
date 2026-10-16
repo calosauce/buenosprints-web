@@ -302,17 +302,6 @@ app.get("/api/cupones/:codigo", async (req, res) => {
   }
 });
 
-// TEMPORAL — devuelve el montaje en PDF de un ítem enviado, para revisarlo
-// visualmente. No guarda nada. Se elimina tras la prueba.
-app.post("/api/prueba/montaje", async (req, res) => {
-  try {
-    const it = req.body || {};
-    if (!montajeValido(it.montaje) || !Array.isArray(it.archivos)) return res.status(400).json({ error: "inválido" });
-    const buf = await generarMontajePDF(it, { numero: "PRUEBA", indice: 1 });
-    res.json({ pdf64: buf.toString("base64") });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
 // Recordatorio automático: cada hora busca pergaminos sin usar que vencen en
