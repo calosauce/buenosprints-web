@@ -326,6 +326,8 @@ select{cursor:pointer}
 .halert{color:var(--accent);font-weight:700}
 .hrow{display:grid;grid-template-columns:44px minmax(0,1fr) auto 32px;gap:10px;align-items:center;padding:8px 0;border-top:1px dashed var(--line)}
 .hthumb{width:44px;height:44px;border-radius:10px;border:1.5px solid var(--line);background:var(--bg) center/contain no-repeat}
+.hthumb.transp{background-color:#fff}
+.hmeta .linkbtn{font-size:12.5px}
 .hmeta b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hmeta small{display:block;font-size:12.5px;color:var(--muted)}
 .hq.ok{color:var(--ok-fg)}.hq.mid{color:#9A6B00}.hq.low{color:var(--accent);font-weight:700}
@@ -600,7 +602,8 @@ dialog::backdrop{background:rgba(23,20,15,.55)}
             </div>
             <div id="dropFile" class="file" hidden>
               <div class="ext" id="fExt"></div>
-              <div class="meta"><b id="fName"></b><span class="muted" id="fSize"></span></div>
+              <div class="meta"><b id="fName"></b><span class="muted" id="fSize"></span>
+                <button type="button" class="linkbtn" id="fFondo" hidden></button></div>
               <button type="button" class="btn sm ghost" id="fRemove">Quitar</button>
             </div>
           </label>
@@ -950,7 +953,7 @@ const CONFIG = {
   FORMATOS: ["png","jpg","jpeg","webp","svg","pdf","ai","eps","psd"],
   // Hojas de stickers: acomodo automático de varios diseños en la hoja.
   HOJA: {
-    MIN_STICKER: 1.5,   // pulgadas: ningún sticker puede quedar menor de 1.5" × 1.5"
+    MIN_STICKER: 1.5,   // pulgadas: lado mayor mínimo de cada sticker
     SEPARACION: 0.5,    // pulgadas entre stickers, para un corte fluido
     MARGEN: 0.25,       // pulgadas entre los stickers y el borde de la hoja
     MAX_DISENOS: 24,
@@ -973,6 +976,8 @@ const state = {
   // natW, natH, recorte:[x0,y0,x1,y1] (fracción sin bordes transparentes),
   // ratio (ancho/alto ya recortado), copias, listo }.
   disenos: [], copiasManual: false, hoja: null,
+  // Subida normal (un diseño): versión sin fondo, si se pudo quitar.
+  sinFondo: false, limpio: null, urlLimpio: null,
 };
 let carrito = [];
 let cuponAplicado = null;
@@ -1273,14 +1278,15 @@ function updatePreview() {
   }
 
   const img = $("#pvImg"), ph = $("#ph"), sheen = $("#sheen");
-  if (state.previewURL) {
-    if (img.getAttribute("src") !== state.previewURL) img.src = state.previewURL;
+  const vista = vistaUnica();
+  if (vista) {
+    if (img.getAttribute("src") !== vista) img.src = vista;
     img.hidden = false; ph.hidden = true;
   } else {
     img.hidden = true; img.removeAttribute("src"); ph.hidden = false;
     ph.textContent = state.archivo ? state.ext.toUpperCase() + " ✓" : "TU DISEÑO";
   }
-  const mask = state.forma === "contorno" && state.previewURL ? `url("${state.previewURL}")` : "";
+  const mask = state.forma === "contorno" && vista ? `url("${vista}")` : "";
   sheen.style.webkitMaskImage = mask; sheen.style.maskImage = mask;
   sheen.style.borderRadius = state.forma === "contorno" && !state.previewURL ? "42% 58% 55% 45%/52% 44% 56% 48%" : "";
 
@@ -1346,17 +1352,31 @@ function setArchivo(file) {
     toast(`El archivo pesa más de ${CONFIG.MAX_MB_ARCHIVO} MB. Pega un enlace de Google Drive o WeTransfer.`);
     $("#altBox").open = true; return;
   }
+  limpiarFondoUnico();
   state.archivo = file; state.ext = ext; state.imgW = state.imgH = null;
   state.previewURL = IMG_EXT.includes(ext) ? URL.createObjectURL(file) : null;
   if (state.previewURL && ext !== "svg") {
     const im = new Image();
-    im.onload = () => { state.imgW = im.naturalWidth; state.imgH = im.naturalHeight; updatePreview(); };
+    im.onload = async () => {
+      state.imgW = im.naturalWidth; state.imgH = im.naturalHeight;
+      const f = quitarFondo(im, state.imgW, state.imgH);
+      if (f && state.archivo === file) {
+        state.limpio = f; state.urlLimpio = await canvasABlobURL(f.canvas); state.sinFondo = true;
+      }
+      renderDrop(); updatePreview();
+    };
     im.src = state.previewURL;
   }
   $("#stepFile").classList.remove("need");
   renderDrop(); updatePreview(); updateSummary();
 }
+function limpiarFondoUnico() {
+  if (state.urlLimpio) URL.revokeObjectURL(state.urlLimpio);
+  state.sinFondo = false; state.limpio = null; state.urlLimpio = null;
+}
+const vistaUnica = () => (state.sinFondo && state.urlLimpio) ? state.urlLimpio : state.previewURL;
 function quitarArchivo() {
+  limpiarFondoUnico();
   if (state.previewURL) URL.revokeObjectURL(state.previewURL);
   state.archivo = null; state.previewURL = null; state.ext = ""; state.imgW = state.imgH = null;
   $("#file").value = "";
@@ -1393,7 +1413,7 @@ function editarItem(id) {
     quitarArchivo();
     state.disenos = []; state.copiasManual = true;
     agregarDisenos(i.archivos.map(a => base64ToFile(a.base64, a.nombre, a.tipo)));
-    i.archivos.forEach((a, k) => { if (state.disenos[k]) state.disenos[k].copias = a.copias || 1; });
+    i.archivos.forEach((a, k) => { if (state.disenos[k]) { state.disenos[k].copias = a.copias || 1; state.disenos[k].sinFondoPreferido = a.sinFondo !== false; } });
   } else if (i.base64) { setArchivo(base64ToFile(i.base64, i.nombre, i.tipo)); }
   else { quitarArchivo(); }
   $("#enlace").value = state.enlace;
@@ -1421,6 +1441,9 @@ function renderDrop() {
   const has = !hojas && !!state.archivo;
   $("#dropEmpty").hidden = has; $("#dropFile").hidden = !has;
   if (has) { $("#fExt").textContent = state.ext; $("#fName").textContent = state.archivo.name; $("#fSize").textContent = pesoTxt(state.archivo.size); }
+  const bf = $("#fFondo");
+  bf.hidden = !(has && state.urlLimpio);
+  bf.textContent = state.sinFondo ? "Fondo quitado ✓ (deshacer)" : "Quitar fondo";
   renderListaHoja();
 }
 const leerBase64 = (file, onProgress) => new Promise((res, rej) => {
@@ -1440,13 +1463,10 @@ const leerBase64 = (file, onProgress) => new Promise((res, rej) => {
 const esHojas = () => state.producto === "hojas";
 const HOJA_IMG_EXT = ["png", "jpg", "jpeg", "webp", "svg"];
 
-// Medidas de un sticker de lado mayor s con proporción r (ancho/alto). Si el
-// diseño es muy alargado, crece lo justo para que su lado corto también
-// respete el mínimo (1.5"); los demás diseños no se ven afectados.
-const medidasSticker = (s, r) => {
-  const lado = Math.max(s, CONFIG.HOJA.MIN_STICKER / Math.min(r, 1 / r));
-  return r >= 1 ? { w: lado, h: lado / r } : { w: lado * r, h: lado };
-};
+// Medidas de un sticker de lado mayor s con proporción r (ancho/alto).
+// El mínimo de 1.5" aplica al LADO MAYOR (s ≥ 1.5"): un diseño alargado puede
+// quedar más angosto que 1.5" en su lado corto.
+const medidasSticker = (s, r) => r >= 1 ? { w: s, h: s / r } : { w: s * r, h: s };
 
 // Acomoda la lista (cada elemento { d, r }) con lado mayor s. Devuelve las
 // piezas con posición en pulgadas (centradas en la hoja) o null si no cabe.
@@ -1486,7 +1506,7 @@ function acomodar(lista, s, W, H) {
 function mejorTamano(lista, W, H) {
   if (!lista.length) return null;
   const MIN = CONFIG.HOJA.MIN_STICKER;
-  // medidasSticker ya garantiza que el lado corto de cada uno sea ≥ 1.5".
+  // El mínimo aplica al lado mayor de cada sticker.
   let lo = MIN;
   if (!acomodar(lista, lo, W, H)) return null;
   let hi = Math.max(W, H);
@@ -1551,6 +1571,77 @@ function recalcularHoja() {
   state.hoja = { cabe: true, s, piezas: acomodar(lista, s, W, H), total: lista.length };
 }
 
+/* ---------- Quitar el fondo (en el navegador) ----------
+   Para logos y diseños sobre un fondo de UN color (blanco, negro, un color
+   sólido, aunque sea JPG con algo de ruido): se toma el color dominante de
+   los bordes y se borra desde afuera hacia adentro solo lo conectado al
+   borde, así se conservan los blancos DENTRO del diseño (el ojo de una letra).
+   Fotos o fondos complejos: no se toca nada (no hay un color dominante).
+   Devuelve { canvas } con transparencia, o null si no aplica. */
+const FONDO = { TOL: 44, BORDE_MIN: 0.72, MAX_LADO: 2500 };
+function quitarFondo(fuente, natW, natH) {
+  const k = Math.min(1, FONDO.MAX_LADO / Math.max(natW, natH));
+  const cw = Math.max(1, Math.round(natW * k)), ch = Math.max(1, Math.round(natH * k));
+  let cv, cx, imgData;
+  try {
+    cv = document.createElement("canvas"); cv.width = cw; cv.height = ch;
+    cx = cv.getContext("2d", { willReadFrequently: true });
+    cx.drawImage(fuente, 0, 0, cw, ch);
+    imgData = cx.getImageData(0, 0, cw, ch);
+  } catch (e) { return null; }
+  const px = imgData.data;
+  // Píxeles del borde de la imagen.
+  const borde = [];
+  for (let x = 0; x < cw; x++) { borde.push(x, (ch - 1) * cw + x); }
+  for (let y = 1; y < ch - 1; y++) { borde.push(y * cw, y * cw + cw - 1); }
+  // Si el borde ya es transparente, la imagen ya viene sin fondo.
+  const transparentes = borde.filter(i => px[i * 4 + 3] < 200).length;
+  if (transparentes / borde.length > 0.3) return null;
+  // Color dominante del borde (agrupando en cubos de 16 niveles).
+  const cubos = new Map();
+  for (const i of borde) {
+    const o = i * 4, key = (px[o] >> 4) << 8 | (px[o + 1] >> 4) << 4 | (px[o + 2] >> 4);
+    const c = cubos.get(key) || [0, 0, 0, 0];
+    c[0] += px[o]; c[1] += px[o + 1]; c[2] += px[o + 2]; c[3]++;
+    cubos.set(key, c);
+  }
+  let mejor = null;
+  for (const c of cubos.values()) if (!mejor || c[3] > mejor[3]) mejor = c;
+  const R = mejor[0] / mejor[3], G = mejor[1] / mejor[3], B = mejor[2] / mejor[3];
+  const T2 = FONDO.TOL * FONDO.TOL;
+  const dist2 = o => (px[o] - R) ** 2 + (px[o + 1] - G) ** 2 + (px[o + 2] - B) ** 2;
+  const parecidos = borde.filter(i => dist2(i * 4) < T2).length;
+  if (parecidos / borde.length < FONDO.BORDE_MIN) return null; // fondo no uniforme (foto)
+  // Relleno desde el borde: solo lo conectado al borde y del color del fondo.
+  const n = cw * ch, fuera = new Uint8Array(n), cola = new Int32Array(n);
+  let ini = 0, fin = 0;
+  for (const i of borde) if (!fuera[i] && dist2(i * 4) < T2) { fuera[i] = 1; cola[fin++] = i; }
+  while (ini < fin) {
+    const i = cola[ini++], x = i % cw;
+    const vecinos = [x > 0 ? i - 1 : -1, x < cw - 1 ? i + 1 : -1, i - cw, i + cw];
+    for (const v of vecinos) {
+      if (v < 0 || v >= n || fuera[v]) continue;
+      if (dist2(v * 4) < T2) { fuera[v] = 1; cola[fin++] = v; }
+    }
+  }
+  const quitados = fin / n;
+  if (quitados < 0.02 || quitados > 0.97) return null; // nada que quitar, o se iría todo
+  // Transparencia, con un borde suave en los píxeles que tocan el fondo.
+  for (let i = 0; i < n; i++) {
+    const o = i * 4;
+    if (fuera[i]) { px[o + 3] = 0; continue; }
+    const x = i % cw;
+    const tocaFondo = (x > 0 && fuera[i - 1]) || (x < cw - 1 && fuera[i + 1]) || (i >= cw && fuera[i - cw]) || (i < n - cw && fuera[i + cw]);
+    if (tocaFondo) {
+      const d = Math.sqrt(dist2(o));
+      if (d < FONDO.TOL * 1.8) px[o + 3] = Math.round(px[o + 3] * Math.min(1, Math.max(0.15, (d - FONDO.TOL) / (FONDO.TOL * 0.8))));
+    }
+  }
+  cx.putImageData(imgData, 0, 0);
+  return { canvas: cv, w: cw, h: ch, color: `rgb(${Math.round(R)},${Math.round(G)},${Math.round(B)})` };
+}
+const canvasABlobURL = cv => new Promise(res => cv.toBlob(b => res(b ? URL.createObjectURL(b) : null), "image/png"));
+
 // Recorte de bordes transparentes (para que el acomodo use la silueta real).
 function medirRecorte(img, natW, natH) {
   const max = 400, k = Math.min(1, max / Math.max(natW, natH));
@@ -1581,11 +1672,19 @@ function agregarDisenos(files) {
     const d = { id: String(Date.now()) + Math.random().toString(36).slice(2, 7), file, nombre: file.name, ext, url: URL.createObjectURL(file), natW: 0, natH: 0, recorte: [0, 0, 1, 1], ratio: 1, copias: 1, listo: false };
     state.disenos.push(d);
     const im = new Image();
-    im.onload = () => {
+    im.onload = async () => {
       d.natW = im.naturalWidth || 1000; d.natH = im.naturalHeight || 1000;
-      d.recorte = medirRecorte(im, d.natW, d.natH);
-      const [x0, y0, x1, y1] = d.recorte;
-      d.ratio = Math.max(0.05, Math.min(20, ((x1 - x0) * d.natW) / ((y1 - y0) * d.natH)));
+      d.recorteOriginal = medirRecorte(im, d.natW, d.natH);
+      // Quitar el fondo (solo imágenes rasterizadas; los SVG ya son limpios).
+      if (d.ext !== "svg") {
+        const f = quitarFondo(im, d.natW, d.natH);
+        if (f) {
+          d.limpio = f; d.urlLimpio = await canvasABlobURL(f.canvas);
+          d.recorteLimpio = medirRecorte(f.canvas, f.w, f.h);
+          d.sinFondo = d.sinFondoPreferido !== false;
+        }
+      }
+      aplicarFondo(d);
       d.listo = true;
       refrescarHoja();
     };
@@ -1598,9 +1697,25 @@ function agregarDisenos(files) {
   $("#stepFile").classList.remove("need");
   refrescarHoja();
 }
+// Usa la versión sin fondo o la original según d.sinFondo.
+function aplicarFondo(d) {
+  const limpio = d.sinFondo && d.urlLimpio;
+  d.recorte = (limpio ? d.recorteLimpio : d.recorteOriginal) || [0, 0, 1, 1];
+  const [x0, y0, x1, y1] = d.recorte;
+  d.ratio = Math.max(0.05, Math.min(20, ((x1 - x0) * d.natW) / ((y1 - y0) * d.natH)));
+}
+const vistaDe = d => (d.sinFondo && d.urlLimpio) ? d.urlLimpio : d.url;
+function alternarFondo(id) {
+  const d = state.disenos.find(x => x.id === id);
+  if (!d || !d.urlLimpio) return;
+  d.sinFondo = !d.sinFondo;
+  aplicarFondo(d);
+  refrescarHoja();
+  toast(d.sinFondo ? "Fondo quitado." : "Listo, usamos tu imagen con el fondo original.");
+}
 function quitarDiseno(id) {
   const d = state.disenos.find(x => x.id === id);
-  if (d) URL.revokeObjectURL(d.url);
+  if (d) { URL.revokeObjectURL(d.url); if (d.urlLimpio) URL.revokeObjectURL(d.urlLimpio); }
   state.disenos = state.disenos.filter(x => x.id !== id);
   if (!state.disenos.length) state.copiasManual = false;
   refrescarHoja();
@@ -1638,8 +1753,8 @@ function renderListaHoja() {
       calidad = dpi >= 300 ? `<span class="hq ok">${dpi} dpi</span>` : dpi >= 150 ? `<span class="hq mid">${dpi} dpi</span>` : `<span class="hq low">${dpi} dpi · baja</span>`;
     } else if (d.ext === "svg") calidad = `<span class="hq ok">Vectorial</span>`;
     return `<div class="hrow">
-      <div class="hthumb" style="background-image:url('${d.url}')"></div>
-      <div class="hmeta"><b title="${esc(d.nombre)}">${esc(d.nombre)}</b><small>${d.listo ? calidad : "Procesando…"}</small></div>
+      <div class="hthumb${d.sinFondo && d.urlLimpio ? " transp" : ""}" style="background-image:url('${vistaDe(d)}')"></div>
+      <div class="hmeta"><b title="${esc(d.nombre)}">${esc(d.nombre)}</b><small>${d.listo ? calidad : "Procesando…"}${d.urlLimpio ? ` · <button type="button" class="linkbtn" data-hoja-fondo="${d.id}">${d.sinFondo ? "Fondo quitado ✓ (deshacer)" : "Quitar fondo"}</button>` : ""}</small></div>
       <div class="hcopias" role="group" aria-label="Copias de ${esc(d.nombre)}">
         <button type="button" data-hoja-menos="${d.id}" aria-label="Una copia menos" ${d.copias <= 1 ? "disabled" : ""}>−</button>
         <span>${d.copias}</span>
@@ -1673,7 +1788,7 @@ function renderHojaPreview() {
     const [x0, y0, x1, y1] = d.recorte;
     const fw = x1 - x0, fh = y1 - y0;
     return `<div class="hpz" style="left:${(p.x / W) * 100}%;top:${(p.y / H) * 100}%;width:${(p.w / W) * 100}%;height:${(p.h / H) * 100}%">
-      <img src="${d.url}" alt="" style="width:${100 / fw}%;height:${100 / fh}%;left:${(-x0 / fw) * 100}%;top:${(-y0 / fh) * 100}%"></div>`;
+      <img src="${vistaDe(d)}" alt="" style="width:${100 / fw}%;height:${100 / fh}%;left:${(-x0 / fw) * 100}%;top:${(-y0 / fh) * 100}%"></div>`;
   }).join("");
   cont.hidden = false;
   return true;
@@ -1683,8 +1798,10 @@ function renderHojaPreview() {
 // servidor solo puede incrustar PNG/JPG). PNG/JPG viajan tal cual.
 async function rasterizarDiseno(d, ladoMayorIn) {
   const [x0, y0, x1, y1] = d.recorte;
-  const im = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = d.url; });
-  const natW = d.natW || 1000, natH = d.natH || 1000;
+  // Con el fondo quitado se parte del canvas limpio (mismas proporciones que el original).
+  const im = d.sinFondo && d.limpio ? d.limpio.canvas
+    : await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = d.url; });
+  const natW = d.sinFondo && d.limpio ? d.limpio.w : (d.natW || 1000), natH = d.sinFondo && d.limpio ? d.limpio.h : (d.natH || 1000);
   const objetivo = Math.min(3000, Math.max(600, Math.round(ladoMayorIn * 300)));
   const k = objetivo / Math.max((x1 - x0) * natW, (y1 - y0) * natH);
   const cw = Math.max(1, Math.round((x1 - x0) * natW * k)), ch = Math.max(1, Math.round((y1 - y0) * natH * k));
@@ -1726,14 +1843,15 @@ async function agregar() {
         const d = state.disenos[k];
         addBtn.textContent = `Subiendo diseño ${k + 1} de ${state.disenos.length}…`;
         const base64 = await leerBase64(d.file);
-        const png64 = ["svg", "webp"].includes(d.ext) ? await rasterizarDiseno(d, h.s) : null;
-        archivos.push({ nombre: d.nombre, tipo: d.file.type || "application/octet-stream", base64, png64, recorte: d.recorte, copias: d.copias });
+        const usarLimpio = d.sinFondo && d.limpio;
+        const png64 = usarLimpio || ["svg", "webp"].includes(d.ext) ? await rasterizarDiseno(d, h.s) : null;
+        archivos.push({ nombre: d.nombre, tipo: d.file.type || "application/octet-stream", base64, png64, recorte: d.recorte, copias: d.copias, sinFondo: Boolean(usarLimpio) });
       }
       carrito.push({
         id: String(Date.now()) + Math.floor(Math.random() * 1000),
         producto: state.producto, productoNombre: P().nombre,
         nombre: `${state.disenos.length} diseño${state.disenos.length === 1 ? "" : "s"} · ${h.total} stickers por hoja`,
-        tipo: "", ext: "hoja", base64: null, thumb: state.disenos[0].url,
+        tipo: "", ext: "hoja", base64: null, thumb: vistaDe(state.disenos[0]),
         archivos,
         montaje: { hoja: { w: state.w, h: state.h }, margen: CONFIG.HOJA.MARGEN, separacion: CONFIG.HOJA.SEPARACION, tam: h.s, total: h.total, piezas: h.piezas },
         enlace: state.enlace, notas: state.notas,
@@ -1759,12 +1877,15 @@ async function agregar() {
       nombre: state.archivo ? state.archivo.name : "Diseño por enlace",
       tipo: state.archivo ? (state.archivo.type || "application/octet-stream") : "",
       ext: state.archivo ? state.ext : "link",
-      base64, thumb: state.previewURL, enlace: state.enlace, notas: state.notas,
+      base64, thumb: vistaUnica(), enlace: state.enlace, notas: state.notas,
+      // Versión sin fondo (PNG): va al taller junto con el original.
+      sinFondo: state.sinFondo && state.limpio ? { nombre: state.archivo.name.replace(/\.[^.]+$/, "") + "-sin-fondo.png", base64: state.limpio.canvas.toDataURL("image/png").split(",")[1] } : null,
       material: CONFIG.MATERIALES[state.material].nombre, forma: CONFIG.FORMAS[state.forma].nombre,
       w: state.w, h: state.h, tamanoTxt: medidaTxt(state.w, state.h),
       cantidad: q, unit: u, descuentoPct, subtotal: redondear(u * q),
     });
     state.archivo = null; state.previewURL = null; state.ext = ""; state.imgW = state.imgH = null;
+    state.sinFondo = false; state.limpio = null; state.urlLimpio = null; // la URL sigue viva como miniatura
     state.enlace = ""; state.notas = "";
     $("#file").value = ""; $("#enlace").value = ""; $("#notas").value = "";
     renderDrop(); updatePreview(); updateSummary(); renderCarrito();
@@ -1895,7 +2016,7 @@ $("#form").addEventListener("submit", async e => {
   if (ent.direccion && !String(f.get("direccion") || "").trim()) { toast("Escribe la dirección de entrega."); $("#direccion").focus(); return; }
   const sp = subProductos();
   if (sp > 0 && sp < CONFIG.MINIMO_PEDIDO) { toast($("#minNotice").textContent); $("#minNotice").scrollIntoView({ behavior: "smooth", block: "center" }); return; }
-  const bytes = carrito.reduce((a, i) => a + (i.base64 ? i.base64.length * 0.75 : 0)
+  const bytes = carrito.reduce((a, i) => a + (i.base64 ? i.base64.length * 0.75 : 0) + (i.sinFondo ? i.sinFondo.base64.length * 0.75 : 0)
     + (i.archivos || []).reduce((b, f) => b + (f.base64.length + (f.png64 ? f.png64.length : 0)) * 0.75, 0), 0);
   if (bytes > CONFIG.MAX_MB_TOTAL * 1048576) { toast(`Tus archivos suman más de ${CONFIG.MAX_MB_TOTAL} MB. Usa enlaces de Drive para los más pesados.`); return; }
 
@@ -1945,6 +2066,7 @@ $("#form").addEventListener("submit", async e => {
         precioUnit: +i.unit.toFixed(2), precioTotal: aCentavos(i.subtotal),
         nombreArchivo: i.nombre, enlace: i.enlace, notas: i.notas,
         archivo: i.base64 ? { nombre: i.nombre, tipo: i.tipo, base64: i.base64 } : null,
+        archivoSinFondo: i.sinFondo || undefined,
         // Hojas de stickers: todos los diseños + el acomodo para el montaje.
         archivos: i.archivos || undefined,
         montaje: i.montaje || undefined,
@@ -2146,10 +2268,18 @@ $("#hojaLista").addEventListener("click", e => {
   if (b.dataset.hojaMas) cambiarCopias(b.dataset.hojaMas, +1);
   else if (b.dataset.hojaMenos) cambiarCopias(b.dataset.hojaMenos, -1);
   else if (b.dataset.hojaQuitar) quitarDiseno(b.dataset.hojaQuitar);
+  else if (b.dataset.hojaFondo) alternarFondo(b.dataset.hojaFondo);
   else if (b.hasAttribute("data-hoja-rellenar")) rellenarHoja();
   else if (b.hasAttribute("data-hoja-agregar")) $("#file").click();
 });
 $("#fRemove").addEventListener("click", e => { e.preventDefault(); e.stopPropagation(); quitarArchivo(); });
+$("#fFondo").addEventListener("click", e => {
+  e.preventDefault(); e.stopPropagation();
+  if (!state.urlLimpio) return;
+  state.sinFondo = !state.sinFondo;
+  renderDrop(); updatePreview();
+  toast(state.sinFondo ? "Fondo quitado." : "Listo, usamos tu imagen con el fondo original.");
+});
 $("#enlace").addEventListener("input", e => { state.enlace = e.target.value.trim(); updateSummary(); });
 $("#notas").addEventListener("input", e => { state.notas = e.target.value; });
 $("#addBtn").addEventListener("click", agregar);

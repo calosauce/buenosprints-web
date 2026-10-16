@@ -45,6 +45,11 @@ app.post("/api/pedidos", async (req, res) => {
         filename: it.archivo.nombre || it.nombreArchivo || `diseno-${i + 1}`,
         content: Buffer.from(it.archivo.base64, "base64"),
       }));
+    // Versión sin fondo (la quitó el navegador): va junto al original.
+    items.forEach((it, i) => {
+      const sf = it.archivoSinFondo;
+      if (sf && sf.base64) archivosAdjuntos.push({ filename: sf.nombre || `diseno-${i + 1}-sin-fondo.png`, content: Buffer.from(sf.base64, "base64") });
+    });
     // Hojas de stickers: varios diseños por ítem (it.archivos). Los originales
     // también van adjuntos al taller, numerados por hoja.
     let numHoja = 0;
@@ -59,8 +64,10 @@ app.post("/api/pedidos", async (req, res) => {
     // nombre y las copias de cada diseño, y el acomodo).
     const detalleLiviano = {
       ...detalle,
-      items: items.map(({ archivo, archivos, ...resto }) =>
-        Array.isArray(archivos) ? { ...resto, archivos: archivos.map((a) => ({ nombre: a.nombre, copias: a.copias })) } : resto),
+      items: items.map(({ archivo, archivos, archivoSinFondo, ...resto }) => {
+        const r = archivoSinFondo ? { ...resto, sinFondo: true } : resto;
+        return Array.isArray(archivos) ? { ...r, archivos: archivos.map((a) => ({ nombre: a.nombre, copias: a.copias, sinFondo: Boolean(a.sinFondo) })) } : r;
+      }),
     };
 
     const pedido = await crearPedido({ cliente: cliente || {}, detalle: detalleLiviano, subtotal, total });

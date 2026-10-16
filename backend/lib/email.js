@@ -174,8 +174,8 @@ function textoTaller(p, linkWa, nArchivos, avisosExtra = [], nMontajes = 0) {
     d.rush ? "RUSH: sí (24h)" : null,
     "", "Diseños:",
     ...items.map((it, i) => `${i + 1}. ${it.producto || "Producto"} · ${it.cantidad || 0} unds${it.w && it.h ? ` · ${it.w}" × ${it.h}"` : ""}${it.material ? " · " + it.material : ""}${it.forma ? " · " + it.forma : ""}` +
-      (it.montaje ? `\n   Hoja de ${it.montaje.hoja.w}" × ${it.montaje.hoja.h}": ${it.montaje.piezas.length} stickers de ${it.montaje.tam}" (montaje PDF adjunto)` + (it.archivos || []).map((a) => `\n   - ${a.nombre} ×${a.copias}`).join("")
-        : it.enlace ? `\n   Enlace: ${it.enlace}` : it.nombreArchivo ? `\n   Archivo adjunto: ${it.nombreArchivo}` : "") + (it.notas ? `\n   Notas: ${it.notas}` : "")),
+      (it.montaje ? `\n   Hoja de ${it.montaje.hoja.w}" × ${it.montaje.hoja.h}": ${it.montaje.piezas.length} stickers de ${it.montaje.tam}" (montaje PDF adjunto)` + (it.archivos || []).map((a) => `\n   - ${a.nombre} ×${a.copias}${a.sinFondo ? " (sin fondo)" : ""}`).join("")
+        : it.enlace ? `\n   Enlace: ${it.enlace}` : it.nombreArchivo ? `\n   Archivo adjunto: ${it.nombreArchivo}${it.sinFondo ? " + versión sin fondo (PNG)" : ""}` : "") + (it.notas ? `\n   Notas: ${it.notas}` : "")),
     d.notas ? `\nNotas del pedido: ${d.notas}` : null,
     "", `Total: ${rd(p.total)}`,
     `Adjuntos: PDF de cotización${nMontajes ? ` + ${nMontajes} montaje(s) de hoja` : ""}${nArchivos ? ` + ${nArchivos} archivo(s) de diseño` : ""}.`,
@@ -228,10 +228,10 @@ function htmlTaller(p, linkWa, nArchivos, avisosExtra = [], nMontajes = 0) {
     const extra = [it.material, it.forma].filter(Boolean).join(" · ");
     const archivo = it.montaje
       ? `Hoja de <b>${esc(it.montaje.hoja.w)}" × ${esc(it.montaje.hoja.h)}"</b>: ${esc(it.montaje.piezas.length)} stickers de ${esc(it.montaje.tam)}" — <b>montaje PDF adjunto</b>` +
-        `<br><span style="color:${C.muted}">${(it.archivos || []).map((a) => `${esc(a.nombre)} ×${esc(a.copias)}`).join(" · ")}</span>`
+        `<br><span style="color:${C.muted}">${(it.archivos || []).map((a) => `${esc(a.nombre)} ×${esc(a.copias)}${a.sinFondo ? " (sin fondo)" : ""}`).join(" · ")}</span>`
       : it.enlace
       ? `<a href="${esc(it.enlace)}" style="color:${C.ink};font-weight:700">Abrir enlace del diseño</a>`
-      : it.nombreArchivo ? `Archivo adjunto: <b>${esc(it.nombreArchivo)}</b>` : `<span style="color:${C.accent};font-weight:700">Sin diseño todavía</span>`;
+      : it.nombreArchivo ? `Archivo adjunto: <b>${esc(it.nombreArchivo)}</b>${it.sinFondo ? " + versión sin fondo (PNG)" : ""}` : `<span style="color:${C.accent};font-weight:700">Sin diseño todavía</span>`;
     return `<tr><td style="padding:10px 0;border-top:1px dashed ${C.line};font:15px/1.45 ${FUENTE};color:${C.ink}">
       <b>${i + 1}. ${esc(it.producto || "Producto")}</b> <span style="color:${C.muted}">— ${esc(Number(it.cantidad || 0).toLocaleString("es-DO"))} unds${esc(medida)}${extra ? " · " + esc(extra) : ""}</span><br>
       ${archivo}${it.notas ? `<br><span style="color:${C.muted}">Notas:</span> ${esc(it.notas)}` : ""}
